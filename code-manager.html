@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MZCD 음원 코드 관리 시스템</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --ink:#14181f; --muted:#6b7280;
+    --line:#e3e6ea; --brand:#2b6cb0; --brand-ink:#fff;
+    --ok:#0f7b4f; --warn:#b45309; --err:#b42318;
+    --ok-bg:#e7f6ee; --warn-bg:#fdf3e3; --err-bg:#fdeceb; --info-bg:#eaf1fa;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    font-size:14px; line-height:1.55;
+  }
+  .wrap{max-width:1240px; margin:0 auto; padding:28px 20px 80px}
+  h1{font-size:22px; margin:0 0 4px}
+  .sub{color:var(--muted); margin:0 0 22px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin-bottom:18px}
+  .card h2{font-size:15px; margin:0 0 12px; letter-spacing:.01em}
+
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px}
+  .stat .k{color:var(--muted); font-size:12px}
+  .stat .v{font-size:24px; font-weight:650; margin-top:2px; font-variant-numeric:tabular-nums}
+
+  .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  button{
+    font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; color:var(--ink); cursor:pointer;
+  }
+  button:hover{background:#f2f4f7}
+  button.primary{background:var(--brand); border-color:var(--brand); color:var(--brand-ink)}
+  button.primary:hover{filter:brightness(1.08)}
+  button.danger{color:var(--err); border-color:#f0c7c3}
+  button.danger:hover{background:var(--err-bg)}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  input,select,textarea{font:inherit; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid #b9d2ee; outline-offset:-1px}
+
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th,td{border-bottom:1px solid var(--line); padding:7px 8px; text-align:left; vertical-align:middle}
+  th{background:#fafbfc; font-weight:600; color:#39414d; white-space:nowrap; position:sticky; top:0; z-index:1}
+  td input{width:100%; padding:5px 7px; border-color:transparent; background:transparent}
+  td input:hover{border-color:var(--line)}
+  td input:focus{border-color:#b9d2ee; background:#fff}
+  .tablewrap{overflow:auto; max-height:62vh; border:1px solid var(--line); border-radius:var(--radius)}
+  .code-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:600; white-space:nowrap}
+  .pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px}
+  .pill.free{background:var(--info-bg); color:#1b4f8a}
+  .pill.used{background:var(--ok-bg); color:var(--ok)}
+  .empty{padding:36px; text-align:center; color:var(--muted)}
+  .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:10px; color:var(--muted)}
+
+  /* ---- Toast (non-blocking, replaces alert) ---- */
+  #toasts{position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:360px}
+  .toast{
+    background:var(--panel); border:1px solid var(--line); border-left-width:4px;
+    border-radius:8px; padding:11px 14px; box-shadow:0 6px 20px rgba(16,24,40,.12);
+    animation:slidein .18s ease-out;
+  }
+  .toast.success{border-left-color:var(--ok); background:var(--ok-bg)}
+  .toast.error{border-left-color:var(--err); background:var(--err-bg)}
+  .toast.warn{border-left-color:var(--warn); background:var(--warn-bg)}
+  .toast.info{border-left-color:var(--brand); background:var(--info-bg)}
+  .toast .t{font-weight:600; margin-bottom:2px}
+  .toast .m{font-size:13px; color:#3a424e; white-space:pre-line}
+  @keyframes slidein{from{opacity:0; transform:translateX(14px)} to{opacity:1; transform:none}}
+
+  /* ---- Custom modal (replaces confirm/prompt) ---- */
+  #modal-root{position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; background:rgba(16,24,40,.42)}
+  #modal-root.open{display:flex}
+  .modal{background:var(--panel); border-radius:12px; width:min(440px,92vw); padding:22px; box-shadow:0 18px 50px rgba(16,24,40,.28)}
+  .modal h3{margin:0 0 8px; font-size:16px}
+  .modal p{margin:0 0 16px; color:#3a424e; white-space:pre-line}
+  .modal .acts{display:flex; gap:8px; justify-content:flex-end}
+  .modal input{width:100%; margin-bottom:16px}
+  .hint{color:var(--muted); font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MZCD 음원 코드 관리 시스템</h1>
+  <p class="sub">코드 형식 <b>#MZCD######</b> (뒤 6자리 랜덤 숫자) · 최대 1,000,000개 조합 · 데이터는 이 브라우저의 localStorage에 저장됩니다.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="k">발급된 코드</div><div class="v" id="stat-issued">0</div></div>
+    <div class="stat"><div class="k">최대 조합 수</div><div class="v" id="stat-max">1,000,000</div></div>
+    <div class="stat"><div class="k">남은 조합 수</div><div class="v" id="stat-left">1,000,000</div></div>
+    <div class="stat"><div class="k">중복 코드</div><div class="v" id="stat-dup">0</div></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>코드 발급</h2>
+    <div class="row">
+      <button class="primary" id="btn-issue" data-testid="issue">새 코드 발급</button>
+      <span class="row" style="gap:6px">
+        <input type="number" id="bulk-count" value="10" min="1" max="10000" style="width:96px">
+        <button id="btn-bulk" data-testid="bulk">개 일괄 발급</button>
+      </span>
+      <button id="btn-dupcheck" data-testid="dupcheck">중복 코드 검사</button>
+      <button id="btn-export" data-testid="export">JSON 내보내기</button>
+      <button id="btn-import" data-testid="import">JSON 가져오기</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+      <button class="danger" id="btn-clear" data-testid="clear">전체 삭제</button>
+    </div>
+    <p class="hint" style="margin:10px 0 0">발급된 코드는 유튜브 영상 설명란에 그대로 붙여넣으세요. 예: <code>#MZCD393049</code></p>
+  </div>
+
+  <div class="card">
+    <h2>코드 마스터 (매칭 테이블)</h2>
+    <div class="row" style="margin-bottom:10px">
+      <input id="search" placeholder="코드 · 음원제목 · 아티스트 · 채널 검색" style="min-width:280px; flex:1">
+      <select id="filter-status">
+        <option value="all">전체 상태</option>
+        <option value="free">미사용</option>
+        <option value="used">사용중</option>
+      </select>
+      <span class="hint" id="result-count"></span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>코드</th><th>상태</th><th>음원 제목</th><th>아티스트</th><th>등록일</th>
+            <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th>비고</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty">아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.</div>
+    </div>
+    <div class="pager">
+      <button id="prev">이전</button>
+      <span id="page-info">1 / 1</span>
+      <button id="next">다음</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" aria-live="polite" role="status"></div>
+<div id="modal-root" role="dialog" aria-modal="true"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   1) 알림 시스템 — alert() 대체 (비차단 토스트)
+   ========================================================= */
+const toastRoot = document.getElementById('toasts');
+// 자동화 도구/테스트에서 마지막 알림을 읽을 수 있도록 전역에 보관
+let lastToast = null;
+
+function toast(message, type = 'info', title = '', ttl = 3800){
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.setAttribute('data-testid', 'toast');
+  el.setAttribute('data-type', type);
+  if (title) {
+    const t = document.createElement('div');
+    t.className = 't'; t.textContent = title; el.appendChild(t);
+  }
+  const m = document.createElement('div');
+  m.className = 'm'; m.textContent = message; el.appendChild(m);
+  toastRoot.appendChild(el);
+  lastToast = { message, type, title };
+  setTimeout(() => {
+    el.style.transition = 'opacity .2s, transform .2s';
+    el.style.opacity = '0'; el.style.transform = 'translateX(14px)';
+    setTimeout(() => el.remove(), 220);
+  }, ttl);
+  return el;
+}
+
+/* =========================================================
+   2) 확인 모달 — confirm() / prompt() 대체 (Promise 기반)
+   ========================================================= */
+const modalRoot = document.getElementById('modal-root');
+
+function closeModal(){ modalRoot.classList.remove('open'); modalRoot.innerHTML = ''; }
+
+function confirmModal({ title, message, okText = '확인', cancelText = '취소', danger = false }){
+  return new Promise(resolve => {
+    modalRoot.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'modal';
+    box.innerHTML =
+      '<h3></h3><p></p><div class="acts">' +
+      '<button data-testid="modal-cancel"></button>' +
+      '<button class="' + (danger ? 'danger' : 'primary') + '" data-testid="modal-ok"></button>' +
+      '</div>';
+    box.querySelector('h3').textContent = title;
+    box.querySelector('p').textContent = message;
+    const cancel = box.querySelector('[data-testid=modal-cancel]');
+    const ok = box.querySelector('[data-testid=modal-ok]');
+    cancel.textContent = cancelText;
+    ok.textContent = okText;
+    const done = v => { closeModal(); document.removeEventListener('keydown', onKey); resolve(v); };
+    cancel.onclick = () => done(false);
+    ok.onclick = () => done(true);
+    function onKey(e){
+      if (e.key === 'Escape') done(false);
+      if (e.key === 'Enter') done(true);
+    }
+    document.addEventListener('keydown', onKey);
+    modalRoot.appendChild(box);
+    modalRoot.classList.add('open');
+    setTimeout(() => ok.focus(), 30);
+  });
+}
+
+modalRoot.addEventListener('click', e => { if (e.target === modalRoot) closeModal(); });
+
+/* =========================================================
+   3) 데이터 계층
+   ========================================================= */
+const STORAGE_KEY = 'mzcd_codes_v1';
+const PREFIX = '#MZCD';
+const DIGITS = 6;
+const MAX_COMBOS = Math.pow(10, DIGITS); // 1,000,000
+
+let records = [];
+let usedSet = new Set();
+
+function load(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    records = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(records)) records = [];
+  } catch (err) {
+    records = [];
+    toast('저장된 데이터를 읽지 못했습니다. 빈 목록으로 시작합니다.', 'error', '불러오기 실패');
+  }
+  usedSet = new Set(records.map(r => r.code));
+}
+
+function save(){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    return true;
+  } catch (err) {
+    toast('브라우저 저장 공간이 부족합니다. JSON으로 내보낸 뒤 정리해 주세요.', 'error', '저장 실패', 7000);
+    return false;
+  }
+}
+
+function randomCode(){
+  const n = Math.floor(Math.random() * MAX_COMBOS);
+  return PREFIX + String(n).padStart(DIGITS, '0');
+}
+
+// 중복되지 않는 코드 1개 생성. 소진 시 null
+function newUniqueCode(){
+  if (usedSet.size >= MAX_COMBOS) return null;
+  for (let i = 0; i < 20000; i++){
+    const c = randomCode();
+    if (!usedSet.has(c)) return c;
+  }
+  return null;
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function makeRecord(code){
+  return { code, title:'', artist:'', createdAt: todayStr(),
+           youtubeUrl:'', videoTitle:'', channel:'', uploadedAt:'', note:'' };
+}
+
+/* =========================================================
+   4) 렌더링
+   ========================================================= */
+const PAGE_SIZE = 100;
+let page = 1;
+
+const $ = id => document.getElementById(id);
+const tbody = $('tbody');
+
+function isUsed(r){ return !!(r.youtubeUrl && r.youtubeUrl.trim()); }
+
+function filtered(){
+  const q = $('search').value.trim().toLowerCase();
+  const st = $('filter-status').value;
+  return records.filter(r => {
+    if (st === 'free' && isUsed(r)) return false;
+    if (st === 'used' && !isUsed(r)) return false;
+    if (!q) return true;
+    return (r.code + ' ' + r.title + ' ' + r.artist + ' ' + r.channel + ' ' + r.videoTitle)
+      .toLowerCase().includes(q);
+  });
+}
+
+function countDuplicates(){
+  const seen = new Set(); let dup = 0;
+  for (const r of records){
+    if (seen.has(r.code)) dup++; else seen.add(r.code);
+  }
+  return dup;
+}
+
+function renderStats(){
+  const dup = countDuplicates();
+  $('stat-issued').textContent = records.length.toLocaleString();
+  $('stat-max').textContent = MAX_COMBOS.toLocaleString();
+  $('stat-left').textContent = Math.max(0, MAX_COMBOS - usedSet.size).toLocaleString();
+  $('stat-dup').textContent = dup.toLocaleString();
+}
+
+const FIELDS = ['title','artist','createdAt','youtubeUrl','videoTitle','channel','uploadedAt','note'];
+
+function renderTable(){
+  const list = filtered();
+  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  if (page > pages) page = pages;
+  const slice = list.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+  $('empty').style.display = list.length ? 'none' : 'block';
+  $('result-count').textContent = list.length ? list.length.toLocaleString() + '건' : '';
+  $('page-info').textContent = page + ' / ' + pages;
+  $('prev').disabled = page <= 1;
+  $('next').disabled = page >= pages;
+
+  const frag = document.createDocumentFragment();
+  for (const r of slice){
+    const tr = document.createElement('tr');
+    tr.dataset.code = r.code;
+
+    const tdCode = document.createElement('td');
+    tdCode.className = 'code-cell';
+    tdCode.textContent = r.code;
+    tdCode.title = '클릭하면 복사됩니다';
+    tdCode.style.cursor = 'pointer';
+    tdCode.onclick = () => copyCode(r.code);
+    tr.appendChild(tdCode);
+
+    const tdSt = document.createElement('td');
+    const pill = document.createElement('span');
+    const used = isUsed(r);
+    pill.className = 'pill ' + (used ? 'used' : 'free');
+    pill.textContent = used ? '사용중' : '미사용';
+    tdSt.appendChild(pill);
+    tr.appendChild(tdSt);
+
+    for (const f of FIELDS){
+      const td = document.createElement('td');
+      const inp = document.createElement('input');
+      inp.value = r[f] || '';
+      inp.dataset.field = f;
+      if (f === 'createdAt' || f === 'uploadedAt') inp.style.minWidth = '92px';
+      if (f === 'youtubeUrl') inp.style.minWidth = '150px';
+      inp.addEventListener('change', () => {
+        r[f] = inp.value;
+        save();
+        renderTable();
+      });
+      td.appendChild(inp);
+      tr.appendChild(td);
+    }
+
+    const tdDel = document.createElement('td');
+    const del = document.createElement('button');
+    del.className = 'danger';
+    del.textContent = '삭제';
+    del.style.padding = '4px 9px';
+    del.onclick = () => removeRecord(r.code);
+    tdDel.appendChild(del);
+    tr.appendChild(tdDel);
+
+    frag.appendChild(tr);
+  }
+  tbody.replaceChildren(frag);
+}
+
+function render(){ renderStats(); renderTable(); }
+
+/* =========================================================
+   5) 동작
+   ========================================================= */
+async function copyCode(code){
+  try {
+    await navigator.clipboard.writeText(code);
+    toast(code + ' 을(를) 클립보드에 복사했습니다.', 'success', '복사 완료', 2200);
+  } catch (err) {
+    toast('클립보드 복사가 차단되었습니다. 직접 선택해 복사해 주세요.', 'warn', '복사 실패');
+  }
+}
+
+function issueOne(){
+  const code = newUniqueCode();
+  if (!code){
+    toast('사용 가능한 코드를 찾지 못했습니다. 조합이 거의 소진되었습니다.', 'error', '발급 불가');
+    return null;
+  }
+  const rec = makeRecord(code);
+  records.unshift(rec);
+  usedSet.add(code);
+  save();
+  page = 1;
+  $('search').value = '';
+  $('filter-status').value = 'all';
+  render();
+  toast(code, 'success', '새 코드 발급 완료');
+  return code;
+}
+
+function issueBulk(n){
+  const made = [];
+  for (let i = 0; i < n; i++){
+    const code = newUniqueCode();
+    if (!code) break;
+    usedSet.add(code);
+    made.push(makeRecord(code));
+  }
+  if (!made.length){
+    toast('발급할 수 있는 코드가 없습니다.', 'error', '발급 불가');
+    return;
+  }
+  records = made.concat(records);
+  save();
+  page = 1;
+  render();
+  toast(made.length.toLocaleString() + '개의 코드를 발급했습니다.' +
+        (made.length < n ? '\n(조합 소진으로 요청보다 적게 발급됨)' : ''),
+        'success', '일괄 발급 완료');
+}
+
+function duplicateCheck(){
+  const seen = new Map();
+  const dups = [];
+  records.forEach((r, i) => {
+    if (seen.has(r.code)) dups.push(r.code);
+    else seen.set(r.code, i);
+  });
+  if (!dups.length){
+    toast('중복된 코드가 없습니다. 총 ' + records.length.toLocaleString() + '개 모두 고유합니다.',
+          'success', '중복 검사 완료');
+  } else {
+    const uniq = Array.from(new Set(dups));
+    toast('중복 ' + dups.length + '건 발견:\n' + uniq.slice(0,8).join(', ') +
+          (uniq.length > 8 ? ' 외 ' + (uniq.length-8) + '건' : ''),
+          'error', '중복 발견', 8000);
+  }
+}
+
+function exportJSON(){
+  const payload = {
+    schema: 'mzcd-code-manager',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    count: records.length,
+    records: records
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mzcd-codes-' + todayStr() + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(records.length.toLocaleString() + '건을 JSON 파일로 저장했습니다.', 'success', '내보내기 완료');
+}
+
+async function importJSON(file){
+  let parsed;
+  try {
+    parsed = JSON.parse(await file.text());
+  } catch (err) {
+    toast('JSON 형식이 올바르지 않습니다.', 'error', '가져오기 실패');
+    return;
+  }
+  const incoming = Array.isArray(parsed) ? parsed : parsed.records;
+  if (!Array.isArray(incoming)){
+    toast('records 배열을 찾을 수 없습니다.', 'error', '가져오기 실패');
+    return;
+  }
+  const valid = incoming.filter(r => r && typeof r.code === 'string' && /^#MZCD\d{6}$/.test(r.code));
+  if (!valid.length){
+    toast('유효한 MZCD 코드가 없습니다.', 'warn', '가져올 항목 없음');
+    return;
+  }
+  const ok = await confirmModal({
+    title: 'JSON 가져오기',
+    message: valid.length.toLocaleString() + '건을 현재 목록에 병합합니다.\n' +
+             '이미 있는 코드는 건너뜁니다. 계속할까요?',
+    okText: '병합하기'
+  });
+  if (!ok){ toast('가져오기를 취소했습니다.', 'info'); return; }
+
+  let added = 0, skipped = 0;
+  for (const r of valid){
+    if (usedSet.has(r.code)){ skipped++; continue; }
+    usedSet.add(r.code);
+    records.push(Object.assign(makeRecord(r.code), r));
+    added++;
+  }
+  save(); render();
+  toast('추가 ' + added.toLocaleString() + '건 · 중복으로 건너뜀 ' + skipped.toLocaleString() + '건',
+        'success', '가져오기 완료');
+}
+
+async function removeRecord(code){
+  const ok = await confirmModal({
+    title: '코드 삭제',
+    message: code + ' 을(를) 목록에서 삭제합니다.\n삭제한 코드는 다시 발급될 수 있습니다.',
+    okText: '삭제', danger: true
+  });
+  if (!ok) return;
+  records = records.filter(r => r.code !== code);
+  usedSet.delete(code);
+  save(); render();
+  toast(code + ' 을(를) 삭제했습니다.', 'success', '삭제 완료');
+}
+
+async function clearAll(){
+  if (!records.length){ toast('삭제할 데이터가 없습니다.', 'info'); return; }
+  const ok = await confirmModal({
+    title: '전체 삭제',
+    message: '발급된 ' + records.length.toLocaleString() + '건을 모두 삭제합니다.\n' +
+             '이 작업은 되돌릴 수 없습니다. 먼저 JSON으로 내보냈는지 확인하세요.',
+    okText: '전체 삭제', danger: true
+  });
+  if (!ok){ toast('전체 삭제를 취소했습니다.', 'info'); return; }
+  records = []; usedSet = new Set();
+  save(); render();
+  toast('모든 코드를 삭제했습니다.', 'success', '삭제 완료');
+}
+
+/* =========================================================
+   6) 이벤트 연결
+   ========================================================= */
+$('btn-issue').onclick = () => issueOne();
+$('btn-bulk').onclick = () => {
+  const n = parseInt($('bulk-count').value, 10);
+  if (!Number.isFinite(n) || n < 1){ toast('1 이상의 숫자를 입력하세요.', 'warn', '입력 확인'); return; }
+  if (n > 10000){ toast('한 번에 최대 10,000개까지 발급할 수 있습니다.', 'warn', '입력 확인'); return; }
+  issueBulk(n);
+};
+$('btn-dupcheck').onclick = duplicateCheck;
+$('btn-export').onclick = exportJSON;
+$('btn-import').onclick = () => $('file-import').click();
+$('file-import').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) importJSON(f);
+  e.target.value = '';
+};
+$('btn-clear').onclick = clearAll;
+$('search').oninput = () => { page = 1; renderTable(); };
+$('filter-status').onchange = () => { page = 1; renderTable(); };
+$('prev').onclick = () => { if (page > 1){ page--; renderTable(); } };
+$('next').onclick = () => { page++; renderTable(); };
+
+/* 자동화 / 디버깅용 훅 — 브라우저 대화상자를 띄우지 않고 상태를 확인할 수 있음 */
+window.__mzcd = {
+  get records(){ return records; },
+  get lastToast(){ return lastToast; },
+  toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
+};
+
+load();
+render();
+})();
+</script>
+</body>
+</html>
