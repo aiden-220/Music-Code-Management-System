@@ -180,6 +180,17 @@
     color:var(--brand); cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;
   }
   .restore:hover{background:var(--brand-soft)}
+  th.cb, td.cb{width:34px; padding-left:12px; padding-right:0}
+  td.cb input, th.cb input{width:15px; height:15px; margin:0; cursor:pointer; accent-color:var(--brand)}
+  tr.picked{background:#f4f8ff}
+  .selbar{
+    display:none; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:10px;
+    padding:10px 13px; background:var(--brand-soft); border:1px solid var(--brand-soft-2);
+    border-radius:var(--r-md); font-size:12.5px; color:#2c3752;
+  }
+  .selbar.show{display:flex}
+  .selbar b{font-size:14px}
+  .selbar .sp{margin-left:auto}
   .trashfoot{
     display:flex; align-items:center; gap:10px; justify-content:flex-end;
     margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);
@@ -373,11 +384,20 @@
       </div>
       <p class="findings" id="result-count"></p>
 
+      <div class="selbar" id="selbar">
+        <span><b id="sel-count">0</b>건 선택됨</span>
+        <button class="btn" id="sel-all-filtered" data-testid="sel-all-filtered">이 조건 전체 선택</button>
+        <span class="sp"></span>
+        <button class="btn" id="sel-restore" data-testid="sel-restore">선택 복원</button>
+        <button class="btn danger" id="sel-delete" data-testid="sel-delete">선택 삭제</button>
+        <button class="btn" id="sel-clear" data-testid="sel-clear">선택 해제</button>
+      </div>
+
       <div class="tablewrap">
         <table>
           <thead>
             <tr>
-              <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>발급일</th><th id="th-last">비고</th><th></th>
+              <th class="cb"><input type="checkbox" id="check-all" title="이 페이지 전체 선택"></th><th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>발급일</th><th id="th-last">비고</th><th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -617,6 +637,7 @@ function isUsed(r){ return !!(r.title && r.title.trim()); }
 
 // 현재 보기 탭: 'all' | 'free'(미배정) | 'used'(배정됨) | 'trash'(휴지통)
 let statusFilter = 'all';
+let selected = new Set();      // 체크된 코드
 const inTrashView = () => statusFilter === 'trash';
 
 function setStatusFilter(v){
@@ -647,6 +668,50 @@ function filtered(){
     if (!q) return true;
     return haystack(r).includes(q);
   });
+}
+
+function clearSelection(){ selected.clear(); }
+
+function currentPageCodes(){
+  const list = filtered();
+  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const p = Math.min(page, pages);
+  return list.slice((p-1)*PAGE_SIZE, p*PAGE_SIZE).map(r => r.code);
+}
+
+function makeCheckCell(r){
+  const td = document.createElement('td');
+  td.className = 'cb';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = selected.has(r.code);
+  cb.setAttribute('data-testid', 'row-check');
+  cb.onchange = () => {
+    if (cb.checked) selected.add(r.code); else selected.delete(r.code);
+    cb.closest('tr').classList.toggle('picked', cb.checked);
+    renderSelBar();
+  };
+  td.appendChild(cb);
+  return td;
+}
+
+function renderSelBar(){
+  const n = selected.size;
+  $('selbar').classList.toggle('show', n > 0);
+  $('sel-count').textContent = n.toLocaleString();
+  $('sel-restore').hidden = !inTrashView();
+  $('sel-delete').textContent = inTrashView() ? '선택 완전 삭제' : '선택 삭제';
+
+  const total = filtered().length;
+  const btnAll = $('sel-all-filtered');
+  btnAll.hidden = n >= total;
+  btnAll.textContent = '이 조건 전체 ' + total.toLocaleString() + '건 선택';
+
+  const pageCodes = currentPageCodes();
+  const on = pageCodes.filter(c => selected.has(c)).length;
+  const ca = $('check-all');
+  ca.checked = pageCodes.length > 0 && on === pageCodes.length;
+  ca.indeterminate = on > 0 && on < pageCodes.length;
 }
 
 function countDuplicates(){
@@ -751,6 +816,8 @@ function renderTable(){
   for (const r of slice){
     const tr = document.createElement('tr');
     tr.dataset.code = r.code;
+    if (selected.has(r.code)) tr.classList.add('picked');
+    tr.appendChild(makeCheckCell(r));
 
     const tdCode = document.createElement('td');
     tdCode.className = 'code-cell';
@@ -797,6 +864,7 @@ function renderTable(){
     frag.appendChild(tr);
   }
   tbody.replaceChildren(frag);
+  renderSelBar();
 }
 
 // 휴지통 목록 — 읽기 전용 + 복원 버튼
@@ -805,6 +873,8 @@ function renderTrashRows(slice){
   for (const r of slice){
     const tr = document.createElement('tr');
     tr.dataset.code = r.code;
+    if (selected.has(r.code)) tr.classList.add('picked');
+    tr.appendChild(makeCheckCell(r));
 
     const tdCode = document.createElement('td');
     tdCode.className = 'code-cell';
@@ -846,6 +916,7 @@ function renderTrashRows(slice){
     frag.appendChild(tr);
   }
   tbody.replaceChildren(frag);
+  renderSelBar();
 }
 
 function fmtDeleted(iso){
@@ -1011,6 +1082,49 @@ async function removeRecord(code){
   toast(code + ' 을(를) 휴지통으로 옮겼습니다.', 'success', '삭제 완료');
 }
 
+/* ---------- 선택 일괄 처리 ---------- */
+async function trashSelected(){
+  const set = new Set(selected);
+  const moved = records.filter(r => set.has(r.code));
+  if (!moved.length){ toast('선택된 코드가 없습니다.', 'info'); return; }
+  const ok = await confirmModal({
+    title: '선택 삭제',
+    message: moved.length.toLocaleString() + '건을 휴지통으로 옮깁니다.\n' +
+             TRASH_DAYS + '일 안에는 휴지통에서 되돌릴 수 있습니다.',
+    okText: '휴지통으로', danger: true
+  });
+  if (!ok){ toast('취소했습니다.', 'info'); return; }
+  records = records.filter(r => !set.has(r.code));
+  toTrash(moved);
+  clearSelection(); save(); render();
+  toast(moved.length.toLocaleString() + '건을 휴지통으로 옮겼습니다.', 'success', '삭제 완료');
+}
+
+async function restoreSelected(){
+  const set = new Set(selected);
+  const items = trash.filter(r => set.has(r.code));
+  if (!items.length){ toast('선택된 코드가 없습니다.', 'info'); return; }
+  restoreList(items);
+  clearSelection(); render();
+  toast(items.length.toLocaleString() + '건을 되돌렸습니다.', 'success', '복원 완료');
+}
+
+async function purgeSelected(){
+  const set = new Set(selected);
+  const items = trash.filter(r => set.has(r.code));
+  if (!items.length){ toast('선택된 코드가 없습니다.', 'info'); return; }
+  const ok = await confirmModal({
+    title: '선택 완전 삭제',
+    message: items.length.toLocaleString() + '건을 완전히 지웁니다.\n' +
+             '이 작업은 되돌릴 수 없습니다.',
+    okText: '완전히 삭제', danger: true
+  });
+  if (!ok){ toast('취소했습니다.', 'info'); return; }
+  trash = trash.filter(r => !set.has(r.code));
+  clearSelection(); saveTrash(); rebuildUsedSet(); render();
+  toast(items.length.toLocaleString() + '건을 완전히 삭제했습니다.', 'success', '삭제 완료');
+}
+
 /* ---------- 휴지통 ---------- */
 function restoreList(list){
   const back = [];
@@ -1095,6 +1209,7 @@ function showScreen(name){
 function showView(v){
   showScreen('list');
   setStatusFilter(v);
+  clearSelection();
   page = 1;
   renderTable();
 }
@@ -1113,12 +1228,23 @@ $('file-import').onchange = e => {
   if (f) importJSON(f);
   e.target.value = '';
 };
+$('check-all').onchange = e => {
+  const codes = currentPageCodes();
+  if (e.target.checked) codes.forEach(c => selected.add(c));
+  else codes.forEach(c => selected.delete(c));
+  renderTable();
+};
+$('sel-all-filtered').onclick = () => { filtered().forEach(r => selected.add(r.code)); renderTable(); };
+$('sel-clear').onclick   = () => { clearSelection(); renderTable(); };
+$('sel-restore').onclick = restoreSelected;
+$('sel-delete').onclick  = () => inTrashView() ? purgeSelected() : trashSelected();
+
 $('btn-restore-all').onclick = restoreAll;
 $('btn-empty-trash').onclick = emptyTrash;
 
-$('search').oninput = () => { page = 1; renderTable(); };
+$('search').oninput = () => { page = 1; clearSelection(); renderTable(); };
 $('search').onkeydown = e => { if (e.key === 'Escape'){ $('search').value = ''; page = 1; renderTable(); } };
-$('search-clear').onclick = () => { $('search').value = ''; page = 1; renderTable(); $('search').focus(); };
+$('search-clear').onclick = () => { $('search').value = ''; page = 1; clearSelection(); renderTable(); $('search').focus(); };
 
 $('tabs').onclick = e => {
   const btn = e.target.closest('.tab');
@@ -1144,8 +1270,8 @@ $('sidenav').onclick = e => {
   if (fn) fn();
 };
 
-$('prev').onclick = () => { if (page > 1){ page--; renderTable(); } };
-$('next').onclick = () => { page++; renderTable(); };
+$('prev').onclick = () => { if (page > 1){ page--; clearSelection(); renderTable(); } };
+$('next').onclick = () => { page++; clearSelection(); renderTable(); };
 
 /* 자동화 / 디버깅용 훅 — 브라우저 대화상자를 띄우지 않고 상태를 확인할 수 있음 */
 window.__mzcd = {
@@ -1155,7 +1281,9 @@ window.__mzcd = {
   get trash(){ return trash; },
   get screen(){ return screen; },
   filtered, setStatusFilter, showView, showScreen,
+  get selected(){ return selected; },
   restoreRecord, restoreAll, emptyTrash, daysLeft, purgeExpired,
+  trashSelected, restoreSelected, purgeSelected, clearSelection,
   isValidCode, checkDigit, randomCode,
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
 };
