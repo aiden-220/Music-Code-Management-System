@@ -3,188 +3,373 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MZCD 음원 코드 관리 시스템</title>
-<meta name="theme-color" content="#2b6cb0">
+<title>MZCD 음원 코드 관리 · TIGERSHEEP HUB</title>
+<meta name="theme-color" content="#2563eb">
 <!-- favicon: 외부 파일 없이 동작하도록 SVG를 인라인 data URI로 삽입 (단일 파일 유지) -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%232b6cb0'/%3E%3Cg%20fill='%23fff'%3E%3Crect%20x='9'%20y='23'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='9'%20y='37'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='19'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3Crect%20x='39'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%232563eb'/%3E%3Cg%20fill='%23fff'%3E%3Crect%20x='9'%20y='23'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='9'%20y='37'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='19'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3Crect%20x='39'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3C/g%3E%3C/svg%3E">
 <style>
   :root{
-    --bg:#f6f7f9; --panel:#fff; --ink:#14181f; --muted:#6b7280;
-    --line:#e3e6ea; --brand:#2b6cb0; --brand-ink:#fff;
-    --ok:#0f7b4f; --warn:#b45309; --err:#b42318;
+    --bg:#f4f6fa; --panel:#fff; --ink:#171c26; --ink-2:#3d4characters;
+    --muted:#78829a; --line:#e6eaf1; --line-2:#eef1f6;
+    --brand:#2563eb; --brand-ink:#fff; --brand-soft:#eef3ff; --brand-soft-2:#e3ebff;
+    --ok:#0f7b4f; --warn:#b45309; --err:#d92d20;
     --ok-bg:#e7f6ee; --warn-bg:#fdf3e3; --err-bg:#fdeceb; --info-bg:#eaf1fa;
-    --radius:10px;
+    --r-lg:16px; --r-md:13px; --r-sm:10px;
+    --sidebar:264px;
   }
   *{box-sizing:border-box}
+  html,body{height:100%}
   body{
     margin:0; background:var(--bg); color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-    font-size:14px; line-height:1.55;
+    font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:1240px; margin:0 auto; padding:28px 20px 80px}
-  h1{font-size:22px; margin:0 0 4px}
-  .sub{color:var(--muted); margin:0 0 22px}
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin-bottom:18px}
-  .card h2{font-size:15px; margin:0 0 12px; letter-spacing:.01em}
+  button{font:inherit}
+  input,select,textarea{font:inherit}
 
-  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px}
-  .stat{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px}
-  .stat .k{color:var(--muted); font-size:12px}
-  .stat .v{font-size:24px; font-weight:650; margin-top:2px; font-variant-numeric:tabular-nums}
+  /* ============ 레이아웃 ============ */
+  .shell{display:flex; min-height:100vh; align-items:flex-start}
 
-  .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-  button{
-    font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line);
-    background:#fff; color:var(--ink); cursor:pointer;
+  /* ============ 사이드바 ============ */
+  .sidebar{
+    width:var(--sidebar); flex:0 0 var(--sidebar); background:var(--panel);
+    border-right:1px solid var(--line); min-height:100vh;
+    position:sticky; top:0; align-self:stretch;
+    display:flex; flex-direction:column; padding:18px 14px 20px;
   }
-  button:hover{background:#f2f4f7}
-  button.primary{background:var(--brand); border-color:var(--brand); color:var(--brand-ink)}
-  button.primary:hover{filter:brightness(1.08)}
-  button.danger{color:var(--err); border-color:#f0c7c3}
-  button.danger:hover{background:var(--err-bg)}
-  button:disabled{opacity:.5; cursor:not-allowed}
-  input,select,textarea{font:inherit; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink)}
-  input:focus,select:focus,textarea:focus{outline:2px solid #b9d2ee; outline-offset:-1px}
+  .brand{display:flex; align-items:center; gap:10px; padding:2px 6px 16px; border-bottom:1px solid var(--line-2)}
+  .brand .mark{
+    width:34px; height:34px; border-radius:9px; background:var(--brand); color:#fff;
+    display:grid; place-items:center; font-weight:800; font-size:15px; letter-spacing:-.02em; flex:none;
+  }
+  .brand .nm{font-weight:800; font-size:15px; letter-spacing:-.01em; line-height:1.2}
+  .brand .nm i{font-style:normal; color:var(--brand)}
+  .brand .sub{font-size:11px; color:var(--muted); font-weight:500}
 
-  table{width:100%; border-collapse:collapse; font-size:13px}
-  th,td{border-bottom:1px solid var(--line); padding:7px 8px; text-align:left; vertical-align:middle}
-  th{background:#fafbfc; font-weight:600; color:#39414d; white-space:nowrap; position:sticky; top:0; z-index:1}
-  td input{width:100%; padding:5px 7px; border-color:transparent; background:transparent}
-  td input:hover{border-color:var(--line)}
-  td input:focus{border-color:#b9d2ee; background:#fff}
-  .tablewrap{overflow:auto; max-height:62vh; border:1px solid var(--line); border-radius:var(--radius)}
-  .code-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:600; white-space:nowrap}
-  .pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; white-space:nowrap}
-  td.nowrap{white-space:nowrap}
-  td.nowrap button{white-space:nowrap}
-  .pill.free{background:var(--info-bg); color:#1b4f8a}
-  .pill.used{background:var(--ok-bg); color:var(--ok)}
-  .empty{padding:36px; text-align:center; color:var(--muted)}
-  .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:10px; color:var(--muted)}
+  .whoami{padding:14px 6px; border-bottom:1px solid var(--line-2)}
+  .whoami .row1{display:flex; align-items:center; gap:9px}
+  .whoami .av{width:34px; height:34px; border-radius:50%; background:var(--brand-soft); display:grid; place-items:center; font-size:17px; flex:none}
+  .whoami .t{font-weight:700; font-size:13px}
+  .whoami .d{font-size:11px; color:var(--muted)}
+  .whoami .meta{margin-top:10px; display:flex; gap:6px}
+  .whoami .chip{
+    flex:1; background:var(--bg); border:1px solid var(--line-2); border-radius:8px;
+    padding:6px 8px; text-align:center;
+  }
+  .whoami .chip b{display:block; font-size:14px; font-variant-numeric:tabular-nums}
+  .whoami .chip span{font-size:10px; color:var(--muted)}
 
-  /* ---- 보기 전환 탭 ---- */
-  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+  .nav{padding-top:12px; overflow-y:auto}
+  .nav .grp{font-size:11px; color:#9aa3b5; font-weight:700; padding:10px 10px 5px; letter-spacing:.02em}
+  .navbtn{
+    width:100%; display:flex; align-items:center; gap:10px; text-align:left;
+    padding:9px 10px; border:0; background:none; border-radius:9px;
+    color:#404a5e; font-size:13.5px; font-weight:600; cursor:pointer; margin-bottom:1px;
+  }
+  .navbtn:hover{background:var(--bg)}
+  .navbtn.on{background:var(--brand-soft); color:var(--brand)}
+  .navbtn .ic{font-size:15px; width:19px; text-align:center; flex:none}
+  .navbtn .cnt{
+    margin-left:auto; font-size:11px; font-weight:700; color:var(--muted);
+    background:var(--line-2); border-radius:999px; padding:1px 7px; font-variant-numeric:tabular-nums;
+  }
+  .navbtn.on .cnt{background:#fff; color:var(--brand)}
+  .navbtn.warn{color:var(--err)}
+  .navbtn.warn:hover{background:var(--err-bg)}
+
+  .sidefoot{margin-top:auto; padding:12px 10px 0; border-top:1px solid var(--line-2); font-size:11px; color:var(--muted)}
+
+  /* ============ 본문 ============ */
+  .main{flex:1; min-width:0; padding:26px 26px 70px}
+  .phead{margin-bottom:20px}
+  .phead h1{font-size:23px; margin:0 0 3px; letter-spacing:-.02em; font-weight:800}
+  .phead h1 i{font-style:normal; color:var(--brand)}
+  .phead p{margin:0; color:var(--muted); font-size:13px}
+
+  /* 내 현황 패널 */
+  .statpanel{
+    background:var(--brand-soft); border:1px solid var(--brand-soft-2);
+    border-radius:var(--r-lg); padding:15px; margin-bottom:16px;
+  }
+  .statpanel > h2{font-size:13px; margin:0 0 11px 3px; font-weight:700; color:#2c3752}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:11px}
+  .stat{background:var(--panel); border:1px solid #dfe7fb; border-radius:var(--r-md); padding:13px 15px}
+  .stat .k{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:5px}
+  .stat .v{font-size:25px; font-weight:800; margin-top:1px; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .stat .c{font-size:11px; color:#9aa3b5; margin-top:1px}
+  .stat.is-warn .v{color:var(--err)}
+
+  /* 카드 */
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:17px 18px; margin-bottom:16px}
+  .card > h2{font-size:14.5px; margin:0 0 13px; font-weight:700; display:flex; align-items:center; gap:7px}
+  .card > h2 .sp{margin-left:auto; font-size:12px; font-weight:600; color:var(--muted)}
+
+  /* 액션 타일 */
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(124px,1fr)); gap:10px}
+  .tile{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--r-md);
+    padding:15px 8px 12px; cursor:pointer; text-align:center; transition:.12s;
+  }
+  .tile:hover{background:var(--bg); border-color:#d4dbe8; transform:translateY(-1px)}
+  .tile .ic{font-size:23px; line-height:1.2; display:block}
+  .tile .lb{display:block; margin-top:6px; font-size:12.5px; font-weight:600; color:#3b4557}
+  .tile.pri{background:var(--brand); border-color:var(--brand)}
+  .tile.pri:hover{background:#1d55d4; border-color:#1d55d4}
+  .tile.pri .lb{color:#fff}
+  .tile.dgr .lb{color:var(--err)}
+  .tile.dgr:hover{background:var(--err-bg); border-color:#f5c2bd}
+
+  .bulkbar{
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+    margin-top:11px; padding:11px 13px; background:var(--bg);
+    border:1px solid var(--line-2); border-radius:var(--r-md);
+  }
+  .bulkbar .lb{font-size:12.5px; font-weight:600; color:#3b4557}
+  .bulkbar input{width:94px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:#fff}
+  .bulkbar .unit{font-size:12.5px; color:var(--muted); margin-left:-3px}
+  .btn{padding:7px 15px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; font-size:13px; font-weight:600}
+  .btn:hover{background:#f2f4f7}
+  .btn.primary{background:var(--brand); border-color:var(--brand); color:#fff}
+  .btn.primary:hover{background:#1d55d4}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .hint{color:var(--muted); font-size:12px; margin:10px 0 0}
+  .hint code{background:var(--bg); border:1px solid var(--line-2); border-radius:5px; padding:1px 5px; font-size:11.5px}
+
+  /* 보기 전환 탭 */
+  .tabs{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px}
   .tab{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:9px 16px; border:1px solid var(--line); border-radius:999px;
-    background:#fff; color:#4a5260; font-weight:600; font-size:14px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    padding:8px 15px; border:1px solid var(--line); border-radius:999px;
+    background:#fff; color:#4a5260; font-weight:600; font-size:13.5px; cursor:pointer;
   }
-  .tab:hover{background:#f2f4f7}
+  .tab:hover{background:var(--bg)}
   .tab.active{background:var(--brand); border-color:var(--brand); color:#fff}
-  .tab.active:hover{filter:brightness(1.08); background:var(--brand)}
+  .tab.active:hover{background:#1d55d4}
   .tab .badge{
-    display:inline-block; min-width:22px; padding:1px 7px; border-radius:999px;
-    background:#eef1f5; color:#4a5260; font-size:12px; font-weight:600;
+    display:inline-block; min-width:21px; padding:1px 7px; border-radius:999px;
+    background:var(--line-2); color:#4a5260; font-size:11.5px; font-weight:700;
     font-variant-numeric:tabular-nums; text-align:center;
   }
-  .tab.active .badge{background:rgba(255,255,255,.24); color:#fff}
+  .tab.active .badge{background:rgba(255,255,255,.26); color:#fff}
 
-  /* ---- 검색창 ---- */
-  .searchbar{position:relative; display:flex; align-items:center; margin-bottom:10px}
-  .searchbar svg{position:absolute; left:12px; width:17px; height:17px; stroke:var(--muted); fill:none; stroke-width:2; pointer-events:none}
-  .searchbar input{width:100%; padding:11px 88px 11px 37px; font-size:15px; border-radius:10px}
-  .searchbar .clear{
-    position:absolute; right:8px; padding:5px 11px; font-size:13px;
-    border-radius:7px; display:none;
+  /* 검색창 */
+  .searchbar{position:relative; display:flex; align-items:center; margin-bottom:9px}
+  .searchbar svg{position:absolute; left:13px; width:16px; height:16px; stroke:var(--muted); fill:none; stroke-width:2; pointer-events:none}
+  .searchbar input{
+    width:100%; padding:11px 88px 11px 38px; font-size:14.5px; border-radius:var(--r-sm);
+    border:1px solid var(--line); background:#fff; color:var(--ink);
   }
+  .searchbar input:focus{outline:2px solid #bcd0f8; outline-offset:-1px; border-color:#bcd0f8}
+  .searchbar .clear{position:absolute; right:8px; padding:5px 11px; font-size:12.5px; border-radius:7px; display:none}
   .searchbar .clear.show{display:block}
-  .findings{margin:0 0 10px; color:var(--muted); font-size:13px; min-height:19px}
+  .findings{margin:0 0 10px; color:var(--muted); font-size:12.5px; min-height:19px}
   .findings b{color:var(--ink)}
 
-  /* ---- Toast (non-blocking, replaces alert) ---- */
+  /* 표 */
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th,td{border-bottom:1px solid var(--line-2); padding:8px 9px; text-align:left; vertical-align:middle}
+  th{background:#fafbfd; font-weight:700; color:#5a6478; white-space:nowrap; position:sticky; top:0; z-index:1; font-size:12px}
+  td input{width:100%; padding:5px 7px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--ink)}
+  td input:hover{border-color:var(--line)}
+  td input:focus{border-color:#bcd0f8; background:#fff; outline:none}
+  td.nowrap{white-space:nowrap}
+  td.nowrap button{white-space:nowrap}
+  .tablewrap{overflow:auto; max-height:60vh; border:1px solid var(--line); border-radius:var(--r-md)}
+  .code-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; white-space:nowrap; color:#1f2b45}
+  .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:600; white-space:nowrap}
+  .pill.free{background:var(--info-bg); color:#1b4f8a}
+  .pill.used{background:var(--ok-bg); color:var(--ok)}
+  .del{padding:4px 10px; border-radius:7px; border:1px solid #f0c7c3; background:#fff; color:var(--err); cursor:pointer; font-size:12px; font-weight:600}
+  .del:hover{background:var(--err-bg)}
+  .empty{padding:38px; text-align:center; color:var(--muted)}
+  .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:11px; color:var(--muted); font-size:12.5px}
+
+  /* Toast — alert() 대체 */
   #toasts{position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:360px}
   .toast{
     background:var(--panel); border:1px solid var(--line); border-left-width:4px;
-    border-radius:8px; padding:11px 14px; box-shadow:0 6px 20px rgba(16,24,40,.12);
+    border-radius:var(--r-sm); padding:11px 14px; box-shadow:0 8px 24px rgba(16,24,40,.13);
     animation:slidein .18s ease-out;
   }
   .toast.success{border-left-color:var(--ok); background:var(--ok-bg)}
   .toast.error{border-left-color:var(--err); background:var(--err-bg)}
   .toast.warn{border-left-color:var(--warn); background:var(--warn-bg)}
   .toast.info{border-left-color:var(--brand); background:var(--info-bg)}
-  .toast .t{font-weight:600; margin-bottom:2px}
+  .toast .t{font-weight:700; margin-bottom:2px; font-size:13px}
   .toast .m{font-size:13px; color:#3a424e; white-space:pre-line}
   @keyframes slidein{from{opacity:0; transform:translateX(14px)} to{opacity:1; transform:none}}
 
-  /* ---- Custom modal (replaces confirm/prompt) ---- */
-  #modal-root{position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; background:rgba(16,24,40,.42)}
+  /* Modal — confirm() 대체 */
+  #modal-root{position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; background:rgba(16,24,40,.44)}
   #modal-root.open{display:flex}
-  .modal{background:var(--panel); border-radius:12px; width:min(440px,92vw); padding:22px; box-shadow:0 18px 50px rgba(16,24,40,.28)}
-  .modal h3{margin:0 0 8px; font-size:16px}
-  .modal p{margin:0 0 16px; color:#3a424e; white-space:pre-line}
+  .modal{background:var(--panel); border-radius:var(--r-lg); width:min(440px,92vw); padding:23px; box-shadow:0 18px 50px rgba(16,24,40,.28)}
+  .modal h3{margin:0 0 8px; font-size:16px; font-weight:700}
+  .modal p{margin:0 0 17px; color:#3a424e; white-space:pre-line; font-size:13.5px}
   .modal .acts{display:flex; gap:8px; justify-content:flex-end}
-  .modal input{width:100%; margin-bottom:16px}
-  .hint{color:var(--muted); font-size:12px}
+  .modal .btn.danger{background:var(--err); border-color:var(--err); color:#fff}
+  .modal .btn.danger:hover{background:#b42318}
+
+  /* 반응형 */
+  @media (max-width:900px){
+    .shell{display:block}
+    .sidebar{width:auto; flex:none; min-height:0; position:static; border-right:0; border-bottom:1px solid var(--line); padding:14px}
+    .nav{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:4px; padding-top:10px}
+    .nav .grp{display:none}
+    .sidefoot{display:none}
+    .main{padding:18px 14px 60px}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>MZCD 음원 코드 관리 시스템</h1>
-  <p class="sub">코드 형식 <b>#MZCD######</b> (뒤 6자리 랜덤 숫자) · 최대 1,000,000개 조합 · 데이터는 이 브라우저의 localStorage에 저장됩니다.</p>
+<div class="shell">
 
-  <div class="stats">
-    <div class="stat"><div class="k">발급된 코드</div><div class="v" id="stat-issued">0</div></div>
-    <div class="stat"><div class="k">최대 조합 수</div><div class="v" id="stat-max">1,000,000</div></div>
-    <div class="stat"><div class="k">남은 조합 수</div><div class="v" id="stat-left">1,000,000</div></div>
-    <div class="stat"><div class="k">중복 코드</div><div class="v" id="stat-dup">0</div></div>
-  </div>
+  <!-- ================= 사이드바 ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">ts.</div>
+      <div>
+        <div class="nm">TIGERSHEEP <i>HUB</i></div>
+        <div class="sub">MZCD 음원 코드 관리</div>
+      </div>
+    </div>
 
-  <div class="card" style="margin-top:18px">
-    <h2>코드 발급</h2>
-    <div class="row">
-      <button class="primary" id="btn-issue" data-testid="issue">새 코드 발급</button>
-      <span class="row" style="gap:6px">
-        <input type="number" id="bulk-count" value="10" min="1" max="10000" style="width:96px">
-        <button id="btn-bulk" data-testid="bulk">개 일괄 발급</button>
-      </span>
-      <button id="btn-dupcheck" data-testid="dupcheck">중복 코드 검사</button>
-      <button id="btn-export" data-testid="export">JSON 내보내기</button>
-      <button id="btn-import" data-testid="import">JSON 가져오기</button>
+    <div class="whoami">
+      <div class="row1">
+        <div class="av">🎵</div>
+        <div>
+          <div class="t">코드 마스터</div>
+          <div class="d">이 브라우저에 저장됨</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="chip"><b id="side-total">0</b><span>전체</span></div>
+        <div class="chip"><b id="side-free">0</b><span>미사용</span></div>
+        <div class="chip"><b id="side-used">0</b><span>사용중</span></div>
+      </div>
+    </div>
+
+    <nav class="nav" id="sidenav">
+      <div class="grp">코드 보기</div>
+      <button class="navbtn on" data-act="view-all"><span class="ic">🗂️</span>전체 코드<span class="cnt" id="nav-all">0</span></button>
+      <button class="navbtn" data-act="view-free"><span class="ic">🆕</span>미사용 코드<span class="cnt" id="nav-free">0</span></button>
+      <button class="navbtn" data-act="view-used"><span class="ic">✅</span>사용중 코드<span class="cnt" id="nav-used">0</span></button>
+
+      <div class="grp">코드 발급</div>
+      <button class="navbtn" data-act="issue"><span class="ic">📌</span>새 코드 발급</button>
+      <button class="navbtn" data-act="dupcheck"><span class="ic">🔍</span>중복 코드 검사</button>
+
+      <div class="grp">데이터</div>
+      <button class="navbtn" data-act="export"><span class="ic">⬇️</span>JSON 내보내기</button>
+      <button class="navbtn" data-act="import"><span class="ic">⬆️</span>JSON 가져오기</button>
+      <button class="navbtn warn" data-act="clear"><span class="ic">🗑️</span>전체 삭제</button>
+    </nav>
+
+    <div class="sidefoot">
+      코드 형식 <b>#MZCD######</b><br>
+      데이터는 이 브라우저에만 저장됩니다.
+    </div>
+  </aside>
+
+  <!-- ================= 본문 ================= -->
+  <main class="main">
+    <div class="phead">
+      <h1>MZCD 음원 <i>코드 관리</i></h1>
+      <p>유튜브 영상 설명란 코드와 음원 DB 매칭 · 코드 형식 <b>#MZCD######</b> (뒤 6자리 랜덤 숫자)</p>
+    </div>
+
+    <!-- 내 현황 -->
+    <section class="statpanel">
+      <h2>📊 내 현황</h2>
+      <div class="stats">
+        <div class="stat">
+          <div class="k">🗂️ 발급된 코드</div>
+          <div class="v" id="stat-issued">0</div>
+          <div class="c">남은 조합 <span id="stat-left">1,000,000</span>개</div>
+        </div>
+        <div class="stat">
+          <div class="k">🆕 미사용</div>
+          <div class="v" id="stat-free">0</div>
+          <div class="c">아직 영상에 안 붙인 코드</div>
+        </div>
+        <div class="stat">
+          <div class="k">✅ 사용중</div>
+          <div class="v" id="stat-used">0</div>
+          <div class="c">유튜브 URL이 입력된 코드</div>
+        </div>
+        <div class="stat is-warn">
+          <div class="k">⚠️ 중복 코드</div>
+          <div class="v" id="stat-dup">0</div>
+          <div class="c">최대 조합 <span id="stat-max">1,000,000</span>개</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 코드 발급 -->
+    <section class="card">
+      <h2>⚡ 코드 발급</h2>
+      <div class="tiles">
+        <button class="tile pri" id="btn-issue" data-testid="issue"><span class="ic">📌</span><span class="lb">새 코드 발급</span></button>
+        <button class="tile" id="btn-dupcheck" data-testid="dupcheck"><span class="ic">🔍</span><span class="lb">중복 코드 검사</span></button>
+        <button class="tile" id="btn-export" data-testid="export"><span class="ic">⬇️</span><span class="lb">JSON 내보내기</span></button>
+        <button class="tile" id="btn-import" data-testid="import"><span class="ic">⬆️</span><span class="lb">JSON 가져오기</span></button>
+        <button class="tile dgr" id="btn-clear" data-testid="clear"><span class="ic">🗑️</span><span class="lb">전체 삭제</span></button>
+      </div>
       <input type="file" id="file-import" accept="application/json,.json" hidden>
-      <button class="danger" id="btn-clear" data-testid="clear">전체 삭제</button>
-    </div>
-    <p class="hint" style="margin:10px 0 0">발급된 코드는 유튜브 영상 설명란에 그대로 붙여넣으세요. 예: <code>#MZCD393049</code></p>
-  </div>
 
-  <div class="card">
-    <h2>코드 마스터 (매칭 테이블)</h2>
-    <div class="tabs" id="tabs" role="tablist">
-      <button class="tab active" data-status="all" data-testid="tab-all" role="tab" aria-selected="true">
-        전체 <span class="badge" id="cnt-all">0</span>
-      </button>
-      <button class="tab" data-status="free" data-testid="tab-free" role="tab" aria-selected="false">
-        미사용 <span class="badge" id="cnt-free">0</span>
-      </button>
-      <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">
-        사용중 <span class="badge" id="cnt-used">0</span>
-      </button>
-    </div>
+      <div class="bulkbar">
+        <span class="lb">📦 여러 개 한 번에</span>
+        <input type="number" id="bulk-count" value="10" min="1" max="10000">
+        <span class="unit">개</span>
+        <button class="btn primary" id="btn-bulk" data-testid="bulk">일괄 발급</button>
+      </div>
 
-    <div class="searchbar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
-      <input id="search" data-testid="search" autocomplete="off"
-             placeholder="음원 제목 · 작곡가 · 아티스트 · 코드 · 영상 제목 · 채널명 검색">
-      <button class="clear" id="search-clear" data-testid="search-clear">지우기</button>
-    </div>
-    <p class="findings" id="result-count"></p>
-    <div class="tablewrap">
-      <table>
-        <thead>
-          <tr>
-            <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>등록일</th>
-            <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th>비고</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-      <div class="empty" id="empty">아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.</div>
-    </div>
-    <div class="pager">
-      <button id="prev">이전</button>
-      <span id="page-info">1 / 1</span>
-      <button id="next">다음</button>
-    </div>
-  </div>
+      <p class="hint">발급된 코드는 유튜브 영상 설명란에 그대로 붙여넣으세요. 예: <code>#MZCD393049</code></p>
+    </section>
+
+    <!-- 코드 마스터 -->
+    <section class="card">
+      <h2>🎵 코드 마스터 <span class="sp">클릭하면 코드가 복사됩니다</span></h2>
+
+      <div class="tabs" id="tabs" role="tablist">
+        <button class="tab active" data-status="all" data-testid="tab-all" role="tab" aria-selected="true">
+          전체 <span class="badge" id="cnt-all">0</span>
+        </button>
+        <button class="tab" data-status="free" data-testid="tab-free" role="tab" aria-selected="false">
+          미사용 <span class="badge" id="cnt-free">0</span>
+        </button>
+        <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">
+          사용중 <span class="badge" id="cnt-used">0</span>
+        </button>
+      </div>
+
+      <div class="searchbar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+        <input id="search" data-testid="search" autocomplete="off"
+               placeholder="음원 제목 · 작곡가 · 아티스트 · 코드 · 영상 제목 · 채널명 검색">
+        <button class="btn clear" id="search-clear" data-testid="search-clear">지우기</button>
+      </div>
+      <p class="findings" id="result-count"></p>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>등록일</th>
+              <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th>비고</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty">아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.</div>
+      </div>
+
+      <div class="pager">
+        <button class="btn" id="prev">이전</button>
+        <span id="page-info">1 / 1</span>
+        <button class="btn" id="next">다음</button>
+      </div>
+    </section>
+  </main>
 </div>
 
 <div id="toasts" aria-live="polite" role="status"></div>
@@ -236,8 +421,8 @@ function confirmModal({ title, message, okText = '확인', cancelText = '취소'
     box.className = 'modal';
     box.innerHTML =
       '<h3></h3><p></p><div class="acts">' +
-      '<button data-testid="modal-cancel"></button>' +
-      '<button class="' + (danger ? 'danger' : 'primary') + '" data-testid="modal-ok"></button>' +
+      '<button class="btn" data-testid="modal-cancel"></button>' +
+      '<button class="btn ' + (danger ? 'danger' : 'primary') + '" data-testid="modal-ok"></button>' +
       '</div>';
     box.querySelector('h3').textContent = title;
     box.querySelector('p').textContent = message;
@@ -341,6 +526,10 @@ function setStatusFilter(v){
     t.classList.toggle('active', on);
     t.setAttribute('aria-selected', on ? 'true' : 'false');
   }
+  for (const b of document.querySelectorAll('#sidenav .navbtn')){
+    if (!b.dataset.act.startsWith('view-')) continue;
+    b.classList.toggle('on', b.dataset.act === 'view-' + v);
+  }
 }
 
 // 검색 대상 필드
@@ -369,16 +558,32 @@ function countDuplicates(){
 
 function renderStats(){
   const dup = countDuplicates();
-  $('stat-issued').textContent = records.length.toLocaleString();
+  let used = 0;
+  for (const r of records) if (isUsed(r)) used++;
+  const free = records.length - used;
+
+  const nAll = records.length.toLocaleString();
+  const nFree = free.toLocaleString();
+  const nUsed = used.toLocaleString();
+
+  $('stat-issued').textContent = nAll;
+  $('stat-free').textContent = nFree;
+  $('stat-used').textContent = nUsed;
   $('stat-max').textContent = MAX_COMBOS.toLocaleString();
   $('stat-left').textContent = Math.max(0, MAX_COMBOS - usedSet.size).toLocaleString();
   $('stat-dup').textContent = dup.toLocaleString();
 
-  let used = 0;
-  for (const r of records) if (isUsed(r)) used++;
-  $('cnt-all').textContent = records.length.toLocaleString();
-  $('cnt-used').textContent = used.toLocaleString();
-  $('cnt-free').textContent = (records.length - used).toLocaleString();
+  $('cnt-all').textContent = nAll;
+  $('cnt-free').textContent = nFree;
+  $('cnt-used').textContent = nUsed;
+
+  $('nav-all').textContent = nAll;
+  $('nav-free').textContent = nFree;
+  $('nav-used').textContent = nUsed;
+
+  $('side-total').textContent = nAll;
+  $('side-free').textContent = nFree;
+  $('side-used').textContent = nUsed;
 }
 
 const FIELDS = ['title','composer','artist','createdAt','youtubeUrl','videoTitle','channel','uploadedAt','note'];
@@ -439,12 +644,14 @@ function renderTable(){
       const inp = document.createElement('input');
       inp.value = r[f] || '';
       inp.dataset.field = f;
-      if (f === 'createdAt' || f === 'uploadedAt') inp.style.minWidth = '92px';
-      if (f === 'youtubeUrl') inp.style.minWidth = '150px';
+      const MINW = { title:'130px', composer:'96px', artist:'96px', createdAt:'96px',
+                     youtubeUrl:'186px', videoTitle:'150px', channel:'110px',
+                     uploadedAt:'96px', note:'110px' };
+      if (MINW[f]) inp.style.minWidth = MINW[f];
       inp.addEventListener('change', () => {
         r[f] = inp.value;
         save();
-        render(); // 유튜브 URL이 바뀌면 상태·탭 건수도 같이 갱신
+        render(); // 유튜브 URL이 바뀌면 상태·건수도 같이 갱신
       });
       td.appendChild(inp);
       tr.appendChild(td);
@@ -453,9 +660,8 @@ function renderTable(){
     const tdDel = document.createElement('td');
     tdDel.className = 'nowrap';
     const del = document.createElement('button');
-    del.className = 'danger';
+    del.className = 'del';
     del.textContent = '삭제';
-    del.style.padding = '4px 9px';
     del.onclick = () => removeRecord(r.code);
     tdDel.appendChild(del);
     tr.appendChild(tdDel);
@@ -618,16 +824,25 @@ async function clearAll(){
   toast('모든 코드를 삭제했습니다.', 'success', '삭제 완료');
 }
 
-/* =========================================================
-   6) 이벤트 연결
-   ========================================================= */
-$('btn-issue').onclick = () => issueOne();
-$('btn-bulk').onclick = () => {
+function bulkFromInput(){
   const n = parseInt($('bulk-count').value, 10);
   if (!Number.isFinite(n) || n < 1){ toast('1 이상의 숫자를 입력하세요.', 'warn', '입력 확인'); return; }
   if (n > 10000){ toast('한 번에 최대 10,000개까지 발급할 수 있습니다.', 'warn', '입력 확인'); return; }
   issueBulk(n);
-};
+}
+
+function showView(v){
+  setStatusFilter(v);
+  page = 1;
+  renderTable();
+}
+
+/* =========================================================
+   6) 이벤트 연결
+   ========================================================= */
+$('btn-issue').onclick = () => issueOne();
+$('btn-bulk').onclick = bulkFromInput;
+$('bulk-count').onkeydown = e => { if (e.key === 'Enter') bulkFromInput(); };
 $('btn-dupcheck').onclick = duplicateCheck;
 $('btn-export').onclick = exportJSON;
 $('btn-import').onclick = () => $('file-import').click();
@@ -637,16 +852,35 @@ $('file-import').onchange = e => {
   e.target.value = '';
 };
 $('btn-clear').onclick = clearAll;
+
 $('search').oninput = () => { page = 1; renderTable(); };
 $('search').onkeydown = e => { if (e.key === 'Escape'){ $('search').value = ''; page = 1; renderTable(); } };
 $('search-clear').onclick = () => { $('search').value = ''; page = 1; renderTable(); $('search').focus(); };
+
 $('tabs').onclick = e => {
   const btn = e.target.closest('.tab');
   if (!btn) return;
-  setStatusFilter(btn.dataset.status);
-  page = 1;
-  renderTable();
+  showView(btn.dataset.status);
 };
+
+// 사이드바 메뉴 — 보기 전환 + 주요 동작
+const NAV_ACTIONS = {
+  'view-all':  () => showView('all'),
+  'view-free': () => showView('free'),
+  'view-used': () => showView('used'),
+  'issue':     () => issueOne(),
+  'dupcheck':  duplicateCheck,
+  'export':    exportJSON,
+  'import':    () => $('file-import').click(),
+  'clear':     clearAll
+};
+$('sidenav').onclick = e => {
+  const btn = e.target.closest('.navbtn');
+  if (!btn) return;
+  const fn = NAV_ACTIONS[btn.dataset.act];
+  if (fn) fn();
+};
+
 $('prev').onclick = () => { if (page > 1){ page--; renderTable(); } };
 $('next').onclick = () => { page++; renderTable(); };
 
@@ -655,7 +889,7 @@ window.__mzcd = {
   get records(){ return records; },
   get lastToast(){ return lastToast; },
   get statusFilter(){ return statusFilter; },
-  filtered, setStatusFilter,
+  filtered, setStatusFilter, showView,
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
 };
 
