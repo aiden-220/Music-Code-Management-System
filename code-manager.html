@@ -252,8 +252,8 @@
     <div class="whoami">
       <div class="meta">
         <div class="chip"><b id="side-total">0</b><span>전체</span></div>
-        <div class="chip"><b id="side-free">0</b><span>미사용</span></div>
-        <div class="chip"><b id="side-used">0</b><span>사용중</span></div>
+        <div class="chip"><b id="side-free">0</b><span>미배정</span></div>
+        <div class="chip"><b id="side-used">0</b><span>배정됨</span></div>
       </div>
       <p class="store">💾 이 브라우저에 저장됨</p>
     </div>
@@ -261,12 +261,12 @@
     <nav class="nav" id="sidenav">
       <div class="grp">코드 보기</div>
       <button class="navbtn on" data-act="view-all"><span class="ic">🗂️</span>전체 코드<span class="cnt" id="nav-all">0</span></button>
-      <button class="navbtn" data-act="view-free"><span class="ic">🆕</span>미사용 코드<span class="cnt" id="nav-free">0</span></button>
-      <button class="navbtn" data-act="view-used"><span class="ic">✅</span>사용중 코드<span class="cnt" id="nav-used">0</span></button>
+      <button class="navbtn" data-act="view-free"><span class="ic">🆕</span>미배정 코드<span class="cnt" id="nav-free">0</span></button>
+      <button class="navbtn" data-act="view-used"><span class="ic">✅</span>배정된 코드<span class="cnt" id="nav-used">0</span></button>
 
       <div class="grp">코드 발급</div>
       <button class="navbtn" data-act="issue"><span class="ic">📌</span>새 코드 발급</button>
-      <button class="navbtn" data-act="dupcheck"><span class="ic">🔍</span>중복 코드 검사</button>
+      <button class="navbtn" data-act="dupcheck"><span class="ic">🔍</span>코드 검사</button>
 
       <div class="grp">데이터</div>
       <button class="navbtn" data-act="export"><span class="ic">⬇️</span>JSON 내보내기</button>
@@ -276,8 +276,8 @@
     </nav>
 
     <div class="sidefoot">
-      코드 형식 <b>#MZCD######</b><br>
-      데이터는 이 브라우저에만 저장됩니다.
+      코드 형식 <b>#MZCD#######</b><br>
+      마지막 한 자리는 오타 검증용입니다.
     </div>
   </aside>
 
@@ -285,7 +285,7 @@
   <main class="main">
     <div class="phead">
       <h1>MZCD 음원 <i>코드 관리</i></h1>
-      <p>유튜브 영상 설명란 코드와 음원 DB 매칭 · 코드 형식 <b>#MZCD######</b> (뒤 6자리 랜덤 숫자)</p>
+      <p>음원마다 고유 코드를 발급합니다 · 형식 <b>#MZCD#######</b> (숫자 7자리, 마지막은 오타 검증용)</p>
     </div>
 
     <!-- 내 현황 -->
@@ -298,14 +298,14 @@
           <div class="c">남은 조합 <span id="stat-left">1,000,000</span>개</div>
         </div>
         <div class="stat">
-          <div class="k">🆕 미사용</div>
+          <div class="k">🆕 미배정</div>
           <div class="v" id="stat-free">0</div>
-          <div class="c">아직 영상에 안 붙인 코드</div>
+          <div class="c">아직 음원에 안 붙인 코드</div>
         </div>
         <div class="stat">
-          <div class="k">✅ 사용중</div>
+          <div class="k">✅ 배정됨</div>
           <div class="v" id="stat-used">0</div>
-          <div class="c">유튜브 URL이 입력된 코드</div>
+          <div class="c">음원에 배정된 코드</div>
         </div>
         <div class="stat is-warn">
           <div class="k">⚠️ 중복 코드</div>
@@ -320,7 +320,7 @@
       <h2>⚡ 코드 발급</h2>
       <div class="tiles">
         <button class="tile pri" id="btn-issue" data-testid="issue"><span class="ic">📌</span><span class="lb">새 코드 발급</span></button>
-        <button class="tile" id="btn-dupcheck" data-testid="dupcheck"><span class="ic">🔍</span><span class="lb">중복 코드 검사</span></button>
+        <button class="tile" id="btn-dupcheck" data-testid="dupcheck"><span class="ic">🔍</span><span class="lb">코드 검사</span></button>
         <button class="tile" id="btn-export" data-testid="export"><span class="ic">⬇️</span><span class="lb">JSON 내보내기</span></button>
         <button class="tile" id="btn-import" data-testid="import"><span class="ic">⬆️</span><span class="lb">JSON 가져오기</span></button>
         <button class="tile dgr" id="btn-clear" data-testid="clear"><span class="ic">🗑️</span><span class="lb">전체 삭제</span></button>
@@ -334,7 +334,7 @@
         <button class="btn primary" id="btn-bulk" data-testid="bulk">일괄 발급</button>
       </div>
 
-      <p class="hint">발급된 코드는 유튜브 영상 설명란에 그대로 붙여넣으세요. 예: <code>#MZCD393049</code></p>
+      <p class="hint">발급한 코드를 음원 제목에 넣으세요. 업로더가 영상 설명란에 그대로 적으면 나중에 자동으로 매칭됩니다. 예: <code>#MZCD3930494</code></p>
     </section>
 
     <!-- 코드 마스터 -->
@@ -346,10 +346,10 @@
           전체 <span class="badge" id="cnt-all">0</span>
         </button>
         <button class="tab" data-status="free" data-testid="tab-free" role="tab" aria-selected="false">
-          미사용 <span class="badge" id="cnt-free">0</span>
+          미배정 <span class="badge" id="cnt-free">0</span>
         </button>
         <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">
-          사용중 <span class="badge" id="cnt-used">0</span>
+          배정됨 <span class="badge" id="cnt-used">0</span>
         </button>
         <button class="tab trash" data-status="trash" data-testid="tab-trash" role="tab" aria-selected="false">
           🗑️ 휴지통 <span class="badge" id="cnt-trash">0</span>
@@ -365,7 +365,7 @@
       <div class="searchbar">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
         <input id="search" data-testid="search" autocomplete="off"
-               placeholder="음원 제목 · 작곡가 · 아티스트 · 코드 · 영상 제목 · 채널명 검색">
+               placeholder="음원 제목 · 작곡가 · 아티스트 · 코드 · 비고 검색">
         <button class="btn clear" id="search-clear" data-testid="search-clear">지우기</button>
       </div>
       <p class="findings" id="result-count"></p>
@@ -374,8 +374,7 @@
         <table>
           <thead>
             <tr>
-              <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>등록일</th>
-              <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th id="th-last">비고</th><th></th>
+              <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>발급일</th><th id="th-last">비고</th><th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -472,7 +471,7 @@ modalRoot.addEventListener('click', e => { if (e.target === modalRoot) closeModa
 const STORAGE_KEY = 'mzcd_codes_v1';
 const TRASH_KEY   = 'mzcd_trash_v1';
 const PREFIX = '#MZCD';
-const DIGITS = 6;
+const DIGITS = 6;          // 본체 6자리 + 검증 1자리
 const MAX_COMBOS = Math.pow(10, DIGITS); // 1,000,000
 const TRASH_DAYS = 30;                   // 휴지통 보관 기간
 const DAY_MS = 86400000;
@@ -551,9 +550,30 @@ function save(){
   }
 }
 
+// 마지막 한 자리는 앞 6자리로 계산한 검증 숫자(Luhn).
+// 한 자리 오타와 두 자리 자리바꿈 오타를 거의 다 잡아냅니다.
+function checkDigit(body){
+  let sum = 0, dbl = true;
+  for (let i = body.length - 1; i >= 0; i--){
+    let d = body.charCodeAt(i) - 48;
+    if (dbl){ d *= 2; if (d > 9) d -= 9; }
+    dbl = !dbl;
+    sum += d;
+  }
+  return String((10 - (sum % 10)) % 10);
+}
+
+function isValidCode(code){
+  if (typeof code !== 'string' || !/^#MZCD\d{7}$/.test(code)) return false;
+  return checkDigit(code.slice(5, 11)) === code.slice(11);
+}
+
+// 구버전(검증 자리 없는 6자리)도 목록에서는 허용 — 가져오기 호환용
+const LEGACY_RE = /^#MZCD\d{6}$/;
+
 function randomCode(){
-  const n = Math.floor(Math.random() * MAX_COMBOS);
-  return PREFIX + String(n).padStart(DIGITS, '0');
+  const body = String(Math.floor(Math.random() * MAX_COMBOS)).padStart(DIGITS, '0');
+  return PREFIX + body + checkDigit(body);
 }
 
 // 중복되지 않는 코드 1개 생성. 소진 시 null
@@ -572,8 +592,7 @@ function todayStr(){
 }
 
 function makeRecord(code){
-  return { code, title:'', composer:'', artist:'', createdAt: todayStr(),
-           youtubeUrl:'', videoTitle:'', channel:'', uploadedAt:'', note:'' };
+  return { code, title:'', composer:'', artist:'', createdAt: todayStr(), note:'' };
 }
 
 /* =========================================================
@@ -585,10 +604,10 @@ let page = 1;
 const $ = id => document.getElementById(id);
 const tbody = $('tbody');
 
-// 유튜브 URL이 채워져 있으면 '사용중', 비어 있으면 '미사용'
-function isUsed(r){ return !!(r.youtubeUrl && r.youtubeUrl.trim()); }
+// 음원 제목이 채워져 있으면 '배정됨', 비어 있으면 '미배정'
+function isUsed(r){ return !!(r.title && r.title.trim()); }
 
-// 현재 보기 탭: 'all' | 'free'(미사용) | 'used'(사용중) | 'trash'(휴지통)
+// 현재 보기 탭: 'all' | 'free'(미배정) | 'used'(배정됨) | 'trash'(휴지통)
 let statusFilter = 'all';
 const inTrashView = () => statusFilter === 'trash';
 
@@ -607,8 +626,8 @@ function setStatusFilter(v){
 
 // 검색 대상 필드
 function haystack(r){
-  return (r.title + ' ' + (r.composer || '') + ' ' + r.artist + ' ' +
-          r.code + ' ' + r.videoTitle + ' ' + r.channel + ' ' + (r.note || '')).toLowerCase();
+  return [r.code, r.title, r.composer, r.artist, r.note]
+    .map(x => x || '').join(' ').toLowerCase();
 }
 
 function filtered(){
@@ -664,8 +683,8 @@ function renderStats(){
   $('nav-trash').textContent = nTrash;
 }
 
-const FIELDS = ['title','composer','artist','createdAt','youtubeUrl','videoTitle','channel','uploadedAt','note'];
-const TAB_LABEL = { all:'전체', free:'미사용', used:'사용중', trash:'휴지통' };
+const FIELDS = ['title','composer','artist','createdAt','note'];
+const TAB_LABEL = { all:'전체', free:'미배정', used:'배정됨', trash:'휴지통' };
 
 function renderTable(){
   const list = filtered();
@@ -737,7 +756,7 @@ function renderTable(){
     const pill = document.createElement('span');
     const used = isUsed(r);
     pill.className = 'pill ' + (used ? 'used' : 'free');
-    pill.textContent = used ? '사용중' : '미사용';
+    pill.textContent = used ? '배정됨' : '미배정';
     tdSt.appendChild(pill);
     tr.appendChild(tdSt);
 
@@ -746,14 +765,12 @@ function renderTable(){
       const inp = document.createElement('input');
       inp.value = r[f] || '';
       inp.dataset.field = f;
-      const MINW = { title:'130px', composer:'96px', artist:'96px', createdAt:'96px',
-                     youtubeUrl:'186px', videoTitle:'150px', channel:'110px',
-                     uploadedAt:'96px', note:'110px' };
+      const MINW = { title:'190px', composer:'110px', artist:'110px', createdAt:'92px', note:'150px' };
       if (MINW[f]) inp.style.minWidth = MINW[f];
       inp.addEventListener('change', () => {
         r[f] = inp.value;
         save();
-        render(); // 유튜브 URL이 바뀌면 상태·건수도 같이 갱신
+        render(); // 음원 제목이 바뀌면 상태·건수도 같이 갱신
       });
       td.appendChild(inp);
       tr.appendChild(td);
@@ -885,22 +902,33 @@ function issueBulk(n){
         'success', '일괄 발급 완료');
 }
 
+// 중복 + 검증문자 유효성을 한 번에 확인
 function duplicateCheck(){
-  const seen = new Map();
+  const seen = new Set();
   const dups = [];
-  records.forEach((r, i) => {
-    if (seen.has(r.code)) dups.push(r.code);
-    else seen.set(r.code, i);
-  });
-  if (!dups.length){
-    toast('중복된 코드가 없습니다. 총 ' + records.length.toLocaleString() + '개 모두 고유합니다.',
-          'success', '중복 검사 완료');
-  } else {
-    const uniq = Array.from(new Set(dups));
-    toast('중복 ' + dups.length + '건 발견:\n' + uniq.slice(0,8).join(', ') +
-          (uniq.length > 8 ? ' 외 ' + (uniq.length-8) + '건' : ''),
-          'error', '중복 발견', 8000);
+  const bad = [];
+  const legacy = [];
+  for (const r of records){
+    if (seen.has(r.code)) dups.push(r.code); else seen.add(r.code);
+    if (isValidCode(r.code)) continue;
+    (LEGACY_RE.test(r.code) ? legacy : bad).push(r.code);
   }
+  const lines = [];
+  if (dups.length)   lines.push('중복 ' + dups.length + '건: ' + preview(dups));
+  if (bad.length)    lines.push('형식이 잘못된 코드 ' + bad.length + '건: ' + preview(bad));
+  if (legacy.length) lines.push('검증 자리가 없는 구버전 코드 ' + legacy.length + '건: ' + preview(legacy));
+
+  if (!lines.length){
+    toast('총 ' + records.length.toLocaleString() + '개 모두 고유하고 형식도 정상입니다.',
+          'success', '코드 검사 완료');
+  } else {
+    toast(lines.join('\n'), 'error', '문제 발견', 9000);
+  }
+}
+
+function preview(list){
+  const uniq = Array.from(new Set(list));
+  return uniq.slice(0, 5).join(', ') + (uniq.length > 5 ? ' 외 ' + (uniq.length - 5) + '건' : '');
 }
 
 function exportJSON(){
@@ -933,7 +961,7 @@ async function importJSON(file){
     toast('records 배열을 찾을 수 없습니다.', 'error', '가져오기 실패');
     return;
   }
-  const valid = incoming.filter(r => r && typeof r.code === 'string' && /^#MZCD\d{6}$/.test(r.code));
+  const valid = incoming.filter(r => r && (isValidCode(r.code) || LEGACY_RE.test(r.code)));
   if (!valid.length){
     toast('유효한 MZCD 코드가 없습니다.', 'warn', '가져올 항목 없음');
     return;
@@ -1113,6 +1141,7 @@ window.__mzcd = {
   get trash(){ return trash; },
   filtered, setStatusFilter, showView,
   restoreRecord, restoreAll, emptyTrash, daysLeft, purgeExpired,
+  isValidCode, checkDigit, randomCode,
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
 };
 
