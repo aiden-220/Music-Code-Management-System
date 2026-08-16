@@ -180,6 +180,11 @@
     color:var(--brand); cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;
   }
   .restore:hover{background:var(--brand-soft)}
+  .trashfoot{
+    display:flex; align-items:center; gap:10px; justify-content:flex-end;
+    margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);
+    font-size:12px; color:var(--muted);
+  }
 
   /* 표 */
   table{width:100%; border-collapse:collapse; font-size:13px}
@@ -272,7 +277,6 @@
       <button class="navbtn" data-act="export"><span class="ic">⬇️</span>JSON 내보내기</button>
       <button class="navbtn" data-act="import"><span class="ic">⬆️</span>JSON 가져오기</button>
       <button class="navbtn" data-act="view-trash"><span class="ic">🗑️</span>휴지통<span class="cnt" id="nav-trash">0</span></button>
-      <button class="navbtn warn" data-act="clear"><span class="ic">🧹</span>전체 삭제</button>
     </nav>
 
     <div class="sidefoot">
@@ -323,7 +327,6 @@
         <button class="tile" id="btn-dupcheck" data-testid="dupcheck"><span class="ic">🔍</span><span class="lb">코드 검사</span></button>
         <button class="tile" id="btn-export" data-testid="export"><span class="ic">⬇️</span><span class="lb">JSON 내보내기</span></button>
         <button class="tile" id="btn-import" data-testid="import"><span class="ic">⬆️</span><span class="lb">JSON 가져오기</span></button>
-        <button class="tile dgr" id="btn-clear" data-testid="clear"><span class="ic">🗑️</span><span class="lb">전체 삭제</span></button>
       </div>
       <input type="file" id="file-import" accept="application/json,.json" hidden>
 
@@ -359,7 +362,6 @@
       <div class="trashbar" id="trashbar" style="display:none">
         <span>🗑️ 삭제한 코드는 <b>30일</b> 동안 여기 보관됩니다. 그 전에 언제든 되돌릴 수 있습니다.</span>
         <button class="btn" id="btn-restore-all" data-testid="restore-all">전체 복원</button>
-        <button class="btn danger" id="btn-empty-trash" data-testid="empty-trash">휴지통 비우기</button>
       </div>
 
       <div class="searchbar">
@@ -386,6 +388,11 @@
         <button class="btn" id="prev">이전</button>
         <span id="page-info">1 / 1</span>
         <button class="btn" id="next">다음</button>
+      </div>
+
+      <div class="trashfoot" id="trashfoot" style="display:none">
+        <span>되돌릴 수 없습니다. 휴지통에 있는 코드를 한꺼번에 완전히 지웁니다.</span>
+        <button class="btn danger" id="btn-empty-trash" data-testid="empty-trash">🗑️ 전체 삭제</button>
       </div>
     </section>
   </main>
@@ -696,7 +703,8 @@ function renderTable(){
   $('search-clear').classList.toggle('show', !!q);
 
   // 휴지통 전용 UI 토글
-  $('trashbar').style.display = inTrashView() ? 'flex' : 'none';
+  $('trashbar').style.display  = inTrashView() ? 'flex' : 'none';
+  $('trashfoot').style.display = inTrashView() ? 'flex' : 'none';
   $('th-last').textContent = inTrashView() ? '삭제일' : '비고';
 
   if (inTrashView()){
@@ -1000,23 +1008,6 @@ async function removeRecord(code){
   toast(code + ' 을(를) 휴지통으로 옮겼습니다.', 'success', '삭제 완료');
 }
 
-async function clearAll(){
-  if (!records.length){ toast('삭제할 데이터가 없습니다.', 'info'); return; }
-  const n = records.length;
-  const ok = await confirmModal({
-    title: '전체 삭제',
-    message: '발급된 ' + n.toLocaleString() + '건을 모두 휴지통으로 옮깁니다.\n' +
-             TRASH_DAYS + '일 안에는 휴지통에서 되돌릴 수 있습니다.',
-    okText: '전체 삭제', danger: true
-  });
-  if (!ok){ toast('전체 삭제를 취소했습니다.', 'info'); return; }
-  toTrash(records);
-  records = [];
-  save(); render();
-  toast(n.toLocaleString() + '건을 휴지통으로 옮겼습니다. 휴지통 탭에서 되돌릴 수 있습니다.',
-        'success', '삭제 완료', 5200);
-}
-
 /* ---------- 휴지통 ---------- */
 function restoreList(list){
   const back = [];
@@ -1058,10 +1049,10 @@ async function emptyTrash(){
   if (!trash.length){ toast('휴지통이 비어 있습니다.', 'info'); return; }
   const n = trash.length;
   const ok = await confirmModal({
-    title: '휴지통 비우기',
-    message: '휴지통의 ' + n.toLocaleString() + '건을 완전히 지웁니다.\n' +
-             '이 작업은 되돌릴 수 없습니다.',
-    okText: '완전히 삭제', danger: true
+    title: '전체 삭제',
+    message: '휴지통에 있는 ' + n.toLocaleString() + '건을 완전히 지웁니다.\n' +
+             '이 작업은 되돌릴 수 없습니다. 되살리려면 지금 취소하고 복원하세요.',
+    okText: '전체 삭제', danger: true
   });
   if (!ok){ toast('취소했습니다.', 'info'); return; }
   trash = [];
@@ -1097,7 +1088,6 @@ $('file-import').onchange = e => {
   if (f) importJSON(f);
   e.target.value = '';
 };
-$('btn-clear').onclick = clearAll;
 $('btn-restore-all').onclick = restoreAll;
 $('btn-empty-trash').onclick = emptyTrash;
 
@@ -1116,12 +1106,11 @@ const NAV_ACTIONS = {
   'view-all':  () => showView('all'),
   'view-free': () => showView('free'),
   'view-used': () => showView('used'),
-  'view-trash':() => showView('trash'),
   'issue':     () => issueOne(),
   'dupcheck':  duplicateCheck,
   'export':    exportJSON,
   'import':    () => $('file-import').click(),
-  'clear':     clearAll
+  'view-trash':() => showView('trash')
 };
 $('sidenav').onclick = e => {
   const btn = e.target.closest('.navbtn');
