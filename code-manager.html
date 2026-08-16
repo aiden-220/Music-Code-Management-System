@@ -195,7 +195,8 @@
   td input:focus{border-color:#bcd0f8; background:#fff; outline:none}
   td.nowrap{white-space:nowrap}
   td.nowrap button{white-space:nowrap}
-  .tablewrap{overflow:auto; max-height:60vh; border:1px solid var(--line); border-radius:var(--r-md)}
+  .tablewrap{border:1px solid var(--line); border-radius:var(--r-md)}
+  @media (max-width:1100px){ .tablewrap{overflow-x:auto} }
   .code-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; white-space:nowrap; color:#1f2b45}
   .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:600; white-space:nowrap}
   .pill.free{background:var(--info-bg); color:#1b4f8a}
@@ -270,7 +271,7 @@
       <button class="navbtn" data-act="view-used"><span class="ic">✅</span>배정된 코드<span class="cnt" id="nav-used">0</span></button>
 
       <div class="grp">코드 발급</div>
-      <button class="navbtn" data-act="issue"><span class="ic">📌</span>새 코드 발급</button>
+      <button class="navbtn" data-act="go-issue"><span class="ic">📌</span>코드 발급</button>
       <button class="navbtn" data-act="dupcheck"><span class="ic">🔍</span>코드 검사</button>
 
       <div class="grp">데이터</div>
@@ -320,7 +321,7 @@
     </section>
 
     <!-- 코드 발급 -->
-    <section class="card">
+    <section class="card screen" id="screen-issue" hidden>
       <h2>⚡ 코드 발급</h2>
       <div class="tiles">
         <button class="tile pri" id="btn-issue" data-testid="issue"><span class="ic">📌</span><span class="lb">새 코드 발급</span></button>
@@ -341,7 +342,7 @@
     </section>
 
     <!-- 코드 마스터 -->
-    <section class="card">
+    <section class="card screen" id="screen-list">
       <h2>🎵 코드 마스터 <span class="sp">클릭하면 코드가 복사됩니다</span></h2>
 
       <div class="tabs" id="tabs" role="tablist">
@@ -882,6 +883,7 @@ function issueOne(){
   save();
   page = 1;
   $('search').value = '';
+  showScreen('list');
   setStatusFilter('all');
   render();
   toast(code, 'success', '새 코드 발급 완료');
@@ -903,6 +905,7 @@ function issueBulk(n){
   records = made.concat(records);
   save();
   page = 1;
+  showScreen('list');
   setStatusFilter('all');
   render();
   toast(made.length.toLocaleString() + '개의 코드를 발급했습니다.' +
@@ -1068,7 +1071,29 @@ function bulkFromInput(){
   issueBulk(n);
 }
 
+// 화면 전환: 'list'(코드 목록) | 'issue'(코드 발급)
+let screen = 'list';
+
+function showScreen(name){
+  screen = name;
+  $('screen-list').hidden  = name !== 'list';
+  $('screen-issue').hidden = name !== 'issue';
+  for (const b of document.querySelectorAll('#sidenav .navbtn')){
+    if (b.dataset.act === 'go-issue') b.classList.toggle('on', name === 'issue');
+  }
+  if (name === 'issue'){
+    // 보기 메뉴 강조만 해제. 선택했던 탭은 그대로 두었다가 돌아올 때 복원
+    for (const b of document.querySelectorAll('#sidenav .navbtn')){
+      if (b.dataset.act.startsWith('view-')) b.classList.remove('on');
+    }
+  } else {
+    setStatusFilter(statusFilter);
+  }
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
 function showView(v){
+  showScreen('list');
   setStatusFilter(v);
   page = 1;
   renderTable();
@@ -1106,7 +1131,7 @@ const NAV_ACTIONS = {
   'view-all':  () => showView('all'),
   'view-free': () => showView('free'),
   'view-used': () => showView('used'),
-  'issue':     () => issueOne(),
+  'go-issue':  () => showScreen('issue'),
   'dupcheck':  duplicateCheck,
   'export':    exportJSON,
   'import':    () => $('file-import').click(),
@@ -1128,7 +1153,8 @@ window.__mzcd = {
   get lastToast(){ return lastToast; },
   get statusFilter(){ return statusFilter; },
   get trash(){ return trash; },
-  filtered, setStatusFilter, showView,
+  get screen(){ return screen; },
+  filtered, setStatusFilter, showView, showScreen,
   restoreRecord, restoreAll, emptyTrash, daysLeft, purgeExpired,
   isValidCode, checkDigit, randomCode,
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
