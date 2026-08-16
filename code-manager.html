@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MZCD 음원 코드 관리 · TIGERSHEEP HUB</title>
+<title>MZCD 음원 코드 관리</title>
 <meta name="theme-color" content="#2563eb">
 <!-- favicon: 외부 파일 없이 동작하도록 SVG를 인라인 data URI로 삽입 (단일 파일 유지) -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%232563eb'/%3E%3Cg%20fill='%23fff'%3E%3Crect%20x='9'%20y='23'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='9'%20y='37'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='19'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3Crect%20x='39'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3C/g%3E%3C/svg%3E">
@@ -40,18 +40,14 @@
   .brand{display:flex; align-items:center; gap:10px; padding:2px 6px 16px; border-bottom:1px solid var(--line-2)}
   .brand .mark{
     width:34px; height:34px; border-radius:9px; background:var(--brand); color:#fff;
-    display:grid; place-items:center; font-weight:800; font-size:15px; letter-spacing:-.02em; flex:none;
+    display:grid; place-items:center; font-weight:800; font-size:19px; line-height:1; flex:none;
   }
-  .brand .nm{font-weight:800; font-size:15px; letter-spacing:-.01em; line-height:1.2}
-  .brand .nm i{font-style:normal; color:var(--brand)}
+  .brand .nm{font-weight:800; font-size:15px; letter-spacing:-.01em; line-height:1.25}
   .brand .sub{font-size:11px; color:var(--muted); font-weight:500}
 
-  .whoami{padding:14px 6px; border-bottom:1px solid var(--line-2)}
-  .whoami .row1{display:flex; align-items:center; gap:9px}
-  .whoami .av{width:34px; height:34px; border-radius:50%; background:var(--brand-soft); display:grid; place-items:center; font-size:17px; flex:none}
-  .whoami .t{font-weight:700; font-size:13px}
-  .whoami .d{font-size:11px; color:var(--muted)}
-  .whoami .meta{margin-top:10px; display:flex; gap:6px}
+  .whoami{padding:13px 6px; border-bottom:1px solid var(--line-2)}
+  .whoami .meta{display:flex; gap:6px}
+  .whoami .store{margin:9px 2px 0; font-size:11px; color:var(--muted)}
   .whoami .chip{
     flex:1; background:var(--bg); border:1px solid var(--line-2); border-radius:8px;
     padding:6px 8px; text-align:center;
@@ -226,26 +222,20 @@
   <!-- ================= 사이드바 ================= -->
   <aside class="sidebar">
     <div class="brand">
-      <div class="mark">ts.</div>
+      <div class="mark">#</div>
       <div>
-        <div class="nm">TIGERSHEEP <i>HUB</i></div>
-        <div class="sub">MZCD 음원 코드 관리</div>
+        <div class="nm">MZCD 코드 관리</div>
+        <div class="sub">음원 ↔ 유튜브 영상 매칭</div>
       </div>
     </div>
 
     <div class="whoami">
-      <div class="row1">
-        <div class="av">🎵</div>
-        <div>
-          <div class="t">코드 마스터</div>
-          <div class="d">이 브라우저에 저장됨</div>
-        </div>
-      </div>
       <div class="meta">
         <div class="chip"><b id="side-total">0</b><span>전체</span></div>
         <div class="chip"><b id="side-free">0</b><span>미사용</span></div>
         <div class="chip"><b id="side-used">0</b><span>사용중</span></div>
       </div>
+      <p class="store">💾 이 브라우저에 저장됨</p>
     </div>
 
     <nav class="nav" id="sidenav">
