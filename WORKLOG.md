@@ -72,6 +72,18 @@
 배포 저장소 = **aiden-220/Music-Code-Management-System** (이 저장소). main 에 커밋하면 Vercel이 자동 재배포함.
 확인 주소: https://mzcd-code-manager.vercel.app/
 
+### 2026-08-16 추가 (4차 — Supabase 시도 후 전면 롤백)
+- 팀 공용 전환을 위해 기존 Supabase 프로젝트에 코드 테이블/함수를 추가했다가 **전부 삭제하고 되돌림.**
+- 사이트도 Supabase 연동 직전 커밋(49b5342)으로 되돌림. 현재 배포본에 supabase 참조 0건.
+- 기존 테이블·정책·데이터는 처음부터 끝까지 수정/삭제한 것 없음 (users 42, music 710, settlements 8 등 그대로).
+- **교훈: 운영 중인 회사 DB는 "어디에 둘까요" 수준으로 물어볼 사안이 아님.** 무엇을 담고 있는
+  시스템인지 먼저 확인하고, 손대기 전에 명확히 경고할 것.
+
 ## 주의사항
+- ⛔ **`hr_developer@whrcompany.com` 계정에 연동된 Supabase는 절대 건드리지 말 것.**
+  - 대상: `hr_developer@whrcompany.com's Project`(ref dtcskjthfermzaszltvx), `shortform-collector`(ref trkxmbtdcjcgoohdqpsz)
+  - 조회·생성·수정 전부 금지. 정산/계약/저작권 등 회사 운영 데이터가 들어있음.
+  - MZCD 코드 관리는 **이것과 별개로 새로 만드는 프로젝트**임. 기존 것에 얹지 말 것.
+  - 나중에 서버 저장이 필요해지면 반드시 **새 프로젝트를 따로 생성**해서 쓸 것.
 - aiden-220/YouTube-Upload-Check 는 용도가 다른 저장소. 건드리지 말 것.
 - 이 저장소는 Public(공개). API 키나 비밀번호를 코드에 절대 넣지 말 것.
