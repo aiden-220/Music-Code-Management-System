@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MZCD 음원 코드 관리 시스템</title>
+<meta name="theme-color" content="#2b6cb0">
+<!-- favicon: 외부 파일 없이 동작하도록 SVG를 인라인 data URI로 삽입 (단일 파일 유지) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%232b6cb0'/%3E%3Cg%20fill='%23fff'%3E%3Crect%20x='9'%20y='23'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='9'%20y='37'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='19'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3Crect%20x='39'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3C/g%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#f6f7f9; --panel:#fff; --ink:#14181f; --muted:#6b7280;
@@ -51,11 +54,42 @@
   td input:focus{border-color:#b9d2ee; background:#fff}
   .tablewrap{overflow:auto; max-height:62vh; border:1px solid var(--line); border-radius:var(--radius)}
   .code-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:600; white-space:nowrap}
-  .pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px}
+  .pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; white-space:nowrap}
+  td.nowrap{white-space:nowrap}
+  td.nowrap button{white-space:nowrap}
   .pill.free{background:var(--info-bg); color:#1b4f8a}
   .pill.used{background:var(--ok-bg); color:var(--ok)}
   .empty{padding:36px; text-align:center; color:var(--muted)}
   .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:10px; color:var(--muted)}
+
+  /* ---- 보기 전환 탭 ---- */
+  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+  .tab{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 16px; border:1px solid var(--line); border-radius:999px;
+    background:#fff; color:#4a5260; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .tab:hover{background:#f2f4f7}
+  .tab.active{background:var(--brand); border-color:var(--brand); color:#fff}
+  .tab.active:hover{filter:brightness(1.08); background:var(--brand)}
+  .tab .badge{
+    display:inline-block; min-width:22px; padding:1px 7px; border-radius:999px;
+    background:#eef1f5; color:#4a5260; font-size:12px; font-weight:600;
+    font-variant-numeric:tabular-nums; text-align:center;
+  }
+  .tab.active .badge{background:rgba(255,255,255,.24); color:#fff}
+
+  /* ---- 검색창 ---- */
+  .searchbar{position:relative; display:flex; align-items:center; margin-bottom:10px}
+  .searchbar svg{position:absolute; left:12px; width:17px; height:17px; stroke:var(--muted); fill:none; stroke-width:2; pointer-events:none}
+  .searchbar input{width:100%; padding:11px 88px 11px 37px; font-size:15px; border-radius:10px}
+  .searchbar .clear{
+    position:absolute; right:8px; padding:5px 11px; font-size:13px;
+    border-radius:7px; display:none;
+  }
+  .searchbar .clear.show{display:block}
+  .findings{margin:0 0 10px; color:var(--muted); font-size:13px; min-height:19px}
+  .findings b{color:var(--ink)}
 
   /* ---- Toast (non-blocking, replaces alert) ---- */
   #toasts{position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:360px}
@@ -114,20 +148,30 @@
 
   <div class="card">
     <h2>코드 마스터 (매칭 테이블)</h2>
-    <div class="row" style="margin-bottom:10px">
-      <input id="search" placeholder="코드 · 음원제목 · 아티스트 · 채널 검색" style="min-width:280px; flex:1">
-      <select id="filter-status">
-        <option value="all">전체 상태</option>
-        <option value="free">미사용</option>
-        <option value="used">사용중</option>
-      </select>
-      <span class="hint" id="result-count"></span>
+    <div class="tabs" id="tabs" role="tablist">
+      <button class="tab active" data-status="all" data-testid="tab-all" role="tab" aria-selected="true">
+        전체 <span class="badge" id="cnt-all">0</span>
+      </button>
+      <button class="tab" data-status="free" data-testid="tab-free" role="tab" aria-selected="false">
+        미사용 <span class="badge" id="cnt-free">0</span>
+      </button>
+      <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">
+        사용중 <span class="badge" id="cnt-used">0</span>
+      </button>
     </div>
+
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+      <input id="search" data-testid="search" autocomplete="off"
+             placeholder="음원 제목 · 작곡가 · 아티스트 · 코드 · 영상 제목 · 채널명 검색">
+      <button class="clear" id="search-clear" data-testid="search-clear">지우기</button>
+    </div>
+    <p class="findings" id="result-count"></p>
     <div class="tablewrap">
       <table>
         <thead>
           <tr>
-            <th>코드</th><th>상태</th><th>음원 제목</th><th>아티스트</th><th>등록일</th>
+            <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>등록일</th>
             <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th>비고</th><th></th>
           </tr>
         </thead>
@@ -271,7 +315,7 @@ function todayStr(){
 }
 
 function makeRecord(code){
-  return { code, title:'', artist:'', createdAt: todayStr(),
+  return { code, title:'', composer:'', artist:'', createdAt: todayStr(),
            youtubeUrl:'', videoTitle:'', channel:'', uploadedAt:'', note:'' };
 }
 
@@ -284,17 +328,34 @@ let page = 1;
 const $ = id => document.getElementById(id);
 const tbody = $('tbody');
 
+// 유튜브 URL이 채워져 있으면 '사용중', 비어 있으면 '미사용'
 function isUsed(r){ return !!(r.youtubeUrl && r.youtubeUrl.trim()); }
+
+// 현재 보기 탭: 'all' | 'free'(미사용) | 'used'(사용중)
+let statusFilter = 'all';
+
+function setStatusFilter(v){
+  statusFilter = v;
+  for (const t of document.querySelectorAll('#tabs .tab')){
+    const on = t.dataset.status === v;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  }
+}
+
+// 검색 대상 필드
+function haystack(r){
+  return (r.title + ' ' + (r.composer || '') + ' ' + r.artist + ' ' +
+          r.code + ' ' + r.videoTitle + ' ' + r.channel + ' ' + (r.note || '')).toLowerCase();
+}
 
 function filtered(){
   const q = $('search').value.trim().toLowerCase();
-  const st = $('filter-status').value;
   return records.filter(r => {
-    if (st === 'free' && isUsed(r)) return false;
-    if (st === 'used' && !isUsed(r)) return false;
+    if (statusFilter === 'free' && isUsed(r)) return false;
+    if (statusFilter === 'used' && !isUsed(r)) return false;
     if (!q) return true;
-    return (r.code + ' ' + r.title + ' ' + r.artist + ' ' + r.channel + ' ' + r.videoTitle)
-      .toLowerCase().includes(q);
+    return haystack(r).includes(q);
   });
 }
 
@@ -312,9 +373,16 @@ function renderStats(){
   $('stat-max').textContent = MAX_COMBOS.toLocaleString();
   $('stat-left').textContent = Math.max(0, MAX_COMBOS - usedSet.size).toLocaleString();
   $('stat-dup').textContent = dup.toLocaleString();
+
+  let used = 0;
+  for (const r of records) if (isUsed(r)) used++;
+  $('cnt-all').textContent = records.length.toLocaleString();
+  $('cnt-used').textContent = used.toLocaleString();
+  $('cnt-free').textContent = (records.length - used).toLocaleString();
 }
 
-const FIELDS = ['title','artist','createdAt','youtubeUrl','videoTitle','channel','uploadedAt','note'];
+const FIELDS = ['title','composer','artist','createdAt','youtubeUrl','videoTitle','channel','uploadedAt','note'];
+const TAB_LABEL = { all:'전체', free:'미사용', used:'사용중' };
 
 function renderTable(){
   const list = filtered();
@@ -322,8 +390,24 @@ function renderTable(){
   if (page > pages) page = pages;
   const slice = list.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
 
+  const q = $('search').value.trim();
+  $('search-clear').classList.toggle('show', !!q);
+
+  if (!records.length){
+    $('empty').textContent = '아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.';
+    $('result-count').textContent = '';
+  } else if (!list.length){
+    $('empty').textContent = q
+      ? '“' + q + '” 와(과) 일치하는 코드가 없습니다.'
+      : TAB_LABEL[statusFilter] + ' 상태인 코드가 없습니다.';
+    $('result-count').textContent = '검색 결과 0건';
+  } else {
+    $('result-count').innerHTML =
+      (q ? '“' + q.replace(/[<>&]/g, '') + '” 검색 결과 ' : TAB_LABEL[statusFilter] + ' ') +
+      '<b>' + list.length.toLocaleString() + '건</b>' +
+      (pages > 1 ? ' · ' + pages.toLocaleString() + '페이지 중 ' + page.toLocaleString() + '페이지' : '');
+  }
   $('empty').style.display = list.length ? 'none' : 'block';
-  $('result-count').textContent = list.length ? list.length.toLocaleString() + '건' : '';
   $('page-info').textContent = page + ' / ' + pages;
   $('prev').disabled = page <= 1;
   $('next').disabled = page >= pages;
@@ -342,6 +426,7 @@ function renderTable(){
     tr.appendChild(tdCode);
 
     const tdSt = document.createElement('td');
+    tdSt.className = 'nowrap';
     const pill = document.createElement('span');
     const used = isUsed(r);
     pill.className = 'pill ' + (used ? 'used' : 'free');
@@ -359,13 +444,14 @@ function renderTable(){
       inp.addEventListener('change', () => {
         r[f] = inp.value;
         save();
-        renderTable();
+        render(); // 유튜브 URL이 바뀌면 상태·탭 건수도 같이 갱신
       });
       td.appendChild(inp);
       tr.appendChild(td);
     }
 
     const tdDel = document.createElement('td');
+    tdDel.className = 'nowrap';
     const del = document.createElement('button');
     del.className = 'danger';
     del.textContent = '삭제';
@@ -405,7 +491,7 @@ function issueOne(){
   save();
   page = 1;
   $('search').value = '';
-  $('filter-status').value = 'all';
+  setStatusFilter('all');
   render();
   toast(code, 'success', '새 코드 발급 완료');
   return code;
@@ -552,7 +638,15 @@ $('file-import').onchange = e => {
 };
 $('btn-clear').onclick = clearAll;
 $('search').oninput = () => { page = 1; renderTable(); };
-$('filter-status').onchange = () => { page = 1; renderTable(); };
+$('search').onkeydown = e => { if (e.key === 'Escape'){ $('search').value = ''; page = 1; renderTable(); } };
+$('search-clear').onclick = () => { $('search').value = ''; page = 1; renderTable(); $('search').focus(); };
+$('tabs').onclick = e => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  setStatusFilter(btn.dataset.status);
+  page = 1;
+  renderTable();
+};
 $('prev').onclick = () => { if (page > 1){ page--; renderTable(); } };
 $('next').onclick = () => { page++; renderTable(); };
 
@@ -560,6 +654,8 @@ $('next').onclick = () => { page++; renderTable(); };
 window.__mzcd = {
   get records(){ return records; },
   get lastToast(){ return lastToast; },
+  get statusFilter(){ return statusFilter; },
+  filtered, setStatusFilter,
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
 };
 
