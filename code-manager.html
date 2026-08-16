@@ -161,6 +161,26 @@
   .findings{margin:0 0 10px; color:var(--muted); font-size:12.5px; min-height:19px}
   .findings b{color:var(--ink)}
 
+  /* ---- 휴지통 ---- */
+  .tab.trash.active{background:#5b6478; border-color:#5b6478}
+  .tab.trash.active:hover{background:#4b5364}
+  .trashbar{
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:11px;
+    padding:11px 13px; background:#fbf7ee; border:1px solid #f0e2c6; border-radius:var(--r-md);
+    font-size:12.5px; color:#6b5a35;
+  }
+  .trashbar b{color:#4a3d1f}
+  .trashbar .btn:first-of-type{margin-left:auto}
+  .pill.trash{background:#eef0f4; color:#5b6478}
+  .pill.soon{background:var(--warn-bg); color:var(--warn)}
+  td.ro{color:#3b4557; white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis}
+  td.ro.dim{color:#b3bacb}
+  .restore{
+    padding:4px 11px; border-radius:7px; border:1px solid #bcd0f8; background:#fff;
+    color:var(--brand); cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;
+  }
+  .restore:hover{background:var(--brand-soft)}
+
   /* 표 */
   table{width:100%; border-collapse:collapse; font-size:13px}
   th,td{border-bottom:1px solid var(--line-2); padding:8px 9px; text-align:left; vertical-align:middle}
@@ -202,8 +222,8 @@
   .modal h3{margin:0 0 8px; font-size:16px; font-weight:700}
   .modal p{margin:0 0 17px; color:#3a424e; white-space:pre-line; font-size:13.5px}
   .modal .acts{display:flex; gap:8px; justify-content:flex-end}
-  .modal .btn.danger{background:var(--err); border-color:var(--err); color:#fff}
-  .modal .btn.danger:hover{background:#b42318}
+  .btn.danger{background:var(--err); border-color:var(--err); color:#fff}
+  .btn.danger:hover{background:#b42318}
 
   /* 반응형 */
   @media (max-width:900px){
@@ -243,6 +263,7 @@
       <button class="navbtn on" data-act="view-all"><span class="ic">🗂️</span>전체 코드<span class="cnt" id="nav-all">0</span></button>
       <button class="navbtn" data-act="view-free"><span class="ic">🆕</span>미사용 코드<span class="cnt" id="nav-free">0</span></button>
       <button class="navbtn" data-act="view-used"><span class="ic">✅</span>사용중 코드<span class="cnt" id="nav-used">0</span></button>
+      <button class="navbtn" data-act="view-trash"><span class="ic">🗑️</span>휴지통<span class="cnt" id="nav-trash">0</span></button>
 
       <div class="grp">코드 발급</div>
       <button class="navbtn" data-act="issue"><span class="ic">📌</span>새 코드 발급</button>
@@ -330,6 +351,15 @@
         <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">
           사용중 <span class="badge" id="cnt-used">0</span>
         </button>
+        <button class="tab trash" data-status="trash" data-testid="tab-trash" role="tab" aria-selected="false">
+          🗑️ 휴지통 <span class="badge" id="cnt-trash">0</span>
+        </button>
+      </div>
+
+      <div class="trashbar" id="trashbar" style="display:none">
+        <span>🗑️ 삭제한 코드는 <b>30일</b> 동안 여기 보관됩니다. 그 전에 언제든 되돌릴 수 있습니다.</span>
+        <button class="btn" id="btn-restore-all" data-testid="restore-all">전체 복원</button>
+        <button class="btn danger" id="btn-empty-trash" data-testid="empty-trash">휴지통 비우기</button>
       </div>
 
       <div class="searchbar">
@@ -345,7 +375,7 @@
           <thead>
             <tr>
               <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>등록일</th>
-              <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th>비고</th><th></th>
+              <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th id="th-last">비고</th><th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -440,12 +470,22 @@ modalRoot.addEventListener('click', e => { if (e.target === modalRoot) closeModa
    3) 데이터 계층
    ========================================================= */
 const STORAGE_KEY = 'mzcd_codes_v1';
+const TRASH_KEY   = 'mzcd_trash_v1';
 const PREFIX = '#MZCD';
 const DIGITS = 6;
 const MAX_COMBOS = Math.pow(10, DIGITS); // 1,000,000
+const TRASH_DAYS = 30;                   // 휴지통 보관 기간
+const DAY_MS = 86400000;
 
 let records = [];
+let trash = [];      // 삭제된 코드. 각 항목에 deletedAt(ISO) 추가됨
 let usedSet = new Set();
+
+// 휴지통 코드도 '이미 쓴 번호'로 취급해야 복원 시 번호가 겹치지 않음
+function rebuildUsedSet(){
+  usedSet = new Set(records.map(r => r.code));
+  for (const r of trash) usedSet.add(r.code);
+}
 
 function load(){
   try {
@@ -456,7 +496,49 @@ function load(){
     records = [];
     toast('저장된 데이터를 읽지 못했습니다. 빈 목록으로 시작합니다.', 'error', '불러오기 실패');
   }
-  usedSet = new Set(records.map(r => r.code));
+  try {
+    const raw = localStorage.getItem(TRASH_KEY);
+    trash = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(trash)) trash = [];
+  } catch (err) {
+    trash = [];
+  }
+  purgeExpired();
+  rebuildUsedSet();
+}
+
+// 30일 지난 항목만 조용히 정리
+function purgeExpired(){
+  const cutoff = Date.now() - TRASH_DAYS * DAY_MS;
+  const before = trash.length;
+  trash = trash.filter(r => {
+    const t = Date.parse(r.deletedAt || '');
+    return !Number.isFinite(t) || t >= cutoff;   // 날짜가 이상하면 지우지 않고 남겨둠
+  });
+  if (trash.length !== before) saveTrash();
+  return before - trash.length;
+}
+
+function daysLeft(r){
+  const t = Date.parse(r.deletedAt || '');
+  if (!Number.isFinite(t)) return TRASH_DAYS;
+  return Math.max(0, Math.ceil((t + TRASH_DAYS * DAY_MS - Date.now()) / DAY_MS));
+}
+
+function saveTrash(){
+  try {
+    localStorage.setItem(TRASH_KEY, JSON.stringify(trash));
+    return true;
+  } catch (err) {
+    toast('저장 공간이 부족해 휴지통을 기록하지 못했습니다.', 'error', '저장 실패', 7000);
+    return false;
+  }
+}
+
+function toTrash(list){
+  const stamp = new Date().toISOString();
+  for (const r of list) trash.unshift(Object.assign({}, r, { deletedAt: stamp }));
+  saveTrash();
 }
 
 function save(){
@@ -506,8 +588,9 @@ const tbody = $('tbody');
 // 유튜브 URL이 채워져 있으면 '사용중', 비어 있으면 '미사용'
 function isUsed(r){ return !!(r.youtubeUrl && r.youtubeUrl.trim()); }
 
-// 현재 보기 탭: 'all' | 'free'(미사용) | 'used'(사용중)
+// 현재 보기 탭: 'all' | 'free'(미사용) | 'used'(사용중) | 'trash'(휴지통)
 let statusFilter = 'all';
+const inTrashView = () => statusFilter === 'trash';
 
 function setStatusFilter(v){
   statusFilter = v;
@@ -530,7 +613,8 @@ function haystack(r){
 
 function filtered(){
   const q = $('search').value.trim().toLowerCase();
-  return records.filter(r => {
+  const src = inTrashView() ? trash : records;
+  return src.filter(r => {
     if (statusFilter === 'free' && isUsed(r)) return false;
     if (statusFilter === 'used' && !isUsed(r)) return false;
     if (!q) return true;
@@ -574,10 +658,14 @@ function renderStats(){
   $('side-total').textContent = nAll;
   $('side-free').textContent = nFree;
   $('side-used').textContent = nUsed;
+
+  const nTrash = trash.length.toLocaleString();
+  $('cnt-trash').textContent = nTrash;
+  $('nav-trash').textContent = nTrash;
 }
 
 const FIELDS = ['title','composer','artist','createdAt','youtubeUrl','videoTitle','channel','uploadedAt','note'];
-const TAB_LABEL = { all:'전체', free:'미사용', used:'사용중' };
+const TAB_LABEL = { all:'전체', free:'미사용', used:'사용중', trash:'휴지통' };
 
 function renderTable(){
   const list = filtered();
@@ -587,6 +675,30 @@ function renderTable(){
 
   const q = $('search').value.trim();
   $('search-clear').classList.toggle('show', !!q);
+
+  // 휴지통 전용 UI 토글
+  $('trashbar').style.display = inTrashView() ? 'flex' : 'none';
+  $('th-last').textContent = inTrashView() ? '삭제일' : '비고';
+
+  if (inTrashView()){
+    if (!trash.length){
+      $('empty').textContent = '휴지통이 비어 있습니다.';
+      $('result-count').textContent = '';
+    } else if (!list.length){
+      $('empty').textContent = '“' + q + '” 와(과) 일치하는 코드가 없습니다.';
+      $('result-count').textContent = '검색 결과 0건';
+    } else {
+      $('result-count').innerHTML =
+        '휴지통 <b>' + list.length.toLocaleString() + '건</b> · 삭제 후 ' + TRASH_DAYS + '일이 지나면 자동으로 사라집니다' +
+        (pages > 1 ? ' · ' + pages.toLocaleString() + '페이지 중 ' + page.toLocaleString() + '페이지' : '');
+    }
+    $('empty').style.display = list.length ? 'none' : 'block';
+    $('page-info').textContent = page + ' / ' + pages;
+    $('prev').disabled = page <= 1;
+    $('next').disabled = page >= pages;
+    renderTrashRows(slice);
+    return;
+  }
 
   if (!records.length){
     $('empty').textContent = '아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.';
@@ -661,6 +773,64 @@ function renderTable(){
   tbody.replaceChildren(frag);
 }
 
+// 휴지통 목록 — 읽기 전용 + 복원 버튼
+function renderTrashRows(slice){
+  const frag = document.createDocumentFragment();
+  for (const r of slice){
+    const tr = document.createElement('tr');
+    tr.dataset.code = r.code;
+
+    const tdCode = document.createElement('td');
+    tdCode.className = 'code-cell';
+    tdCode.textContent = r.code;
+    tdCode.title = '클릭하면 복사됩니다';
+    tdCode.style.cursor = 'pointer';
+    tdCode.onclick = () => copyCode(r.code);
+    tr.appendChild(tdCode);
+
+    const tdSt = document.createElement('td');
+    tdSt.className = 'nowrap';
+    const pill = document.createElement('span');
+    const left = daysLeft(r);
+    pill.className = 'pill ' + (left <= 5 ? 'soon' : 'trash');
+    pill.textContent = left + '일 남음';
+    pill.title = '삭제 후 ' + TRASH_DAYS + '일까지 보관됩니다';
+    tdSt.appendChild(pill);
+    tr.appendChild(tdSt);
+
+    for (const f of FIELDS){
+      const td = document.createElement('td');
+      td.className = 'ro';
+      const v = f === 'note' ? fmtDeleted(r.deletedAt) : (r[f] || '');
+      td.textContent = v || '—';
+      if (!v) td.classList.add('dim');
+      if (v) td.title = v;
+      tr.appendChild(td);
+    }
+
+    const tdAct = document.createElement('td');
+    tdAct.className = 'nowrap';
+    const restore = document.createElement('button');
+    restore.className = 'restore';
+    restore.textContent = '복원';
+    restore.onclick = () => restoreRecord(r.code);
+    tdAct.appendChild(restore);
+    tr.appendChild(tdAct);
+
+    frag.appendChild(tr);
+  }
+  tbody.replaceChildren(frag);
+}
+
+function fmtDeleted(iso){
+  const t = Date.parse(iso || '');
+  if (!Number.isFinite(t)) return '';
+  const d = new Date(t);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
+         String(d.getDate()).padStart(2,'0') + ' ' +
+         String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
 function render(){ renderStats(); renderTable(); }
 
 /* =========================================================
@@ -708,6 +878,7 @@ function issueBulk(n){
   records = made.concat(records);
   save();
   page = 1;
+  setStatusFilter('all');
   render();
   toast(made.length.toLocaleString() + '개의 코드를 발급했습니다.' +
         (made.length < n ? '\n(조합 소진으로 요청보다 적게 발급됨)' : ''),
@@ -790,28 +961,85 @@ async function importJSON(file){
 async function removeRecord(code){
   const ok = await confirmModal({
     title: '코드 삭제',
-    message: code + ' 을(를) 목록에서 삭제합니다.\n삭제한 코드는 다시 발급될 수 있습니다.',
-    okText: '삭제', danger: true
+    message: code + ' 을(를) 휴지통으로 옮깁니다.\n' + TRASH_DAYS + '일 안에는 휴지통에서 되돌릴 수 있습니다.',
+    okText: '휴지통으로', danger: true
   });
   if (!ok) return;
+  const moved = records.filter(r => r.code === code);
   records = records.filter(r => r.code !== code);
-  usedSet.delete(code);
+  toTrash(moved);           // 코드 번호는 usedSet에 그대로 남겨 둠 (복원 대비)
   save(); render();
-  toast(code + ' 을(를) 삭제했습니다.', 'success', '삭제 완료');
+  toast(code + ' 을(를) 휴지통으로 옮겼습니다.', 'success', '삭제 완료');
 }
 
 async function clearAll(){
   if (!records.length){ toast('삭제할 데이터가 없습니다.', 'info'); return; }
+  const n = records.length;
   const ok = await confirmModal({
     title: '전체 삭제',
-    message: '발급된 ' + records.length.toLocaleString() + '건을 모두 삭제합니다.\n' +
-             '이 작업은 되돌릴 수 없습니다. 먼저 JSON으로 내보냈는지 확인하세요.',
+    message: '발급된 ' + n.toLocaleString() + '건을 모두 휴지통으로 옮깁니다.\n' +
+             TRASH_DAYS + '일 안에는 휴지통에서 되돌릴 수 있습니다.',
     okText: '전체 삭제', danger: true
   });
   if (!ok){ toast('전체 삭제를 취소했습니다.', 'info'); return; }
-  records = []; usedSet = new Set();
+  toTrash(records);
+  records = [];
   save(); render();
-  toast('모든 코드를 삭제했습니다.', 'success', '삭제 완료');
+  toast(n.toLocaleString() + '건을 휴지통으로 옮겼습니다. 휴지통 탭에서 되돌릴 수 있습니다.',
+        'success', '삭제 완료', 5200);
+}
+
+/* ---------- 휴지통 ---------- */
+function restoreList(list){
+  const back = [];
+  for (const r of list){
+    const rec = Object.assign({}, r);
+    delete rec.deletedAt;
+    back.push(rec);
+  }
+  records = back.concat(records);
+  const codes = new Set(list.map(r => r.code));
+  trash = trash.filter(r => !codes.has(r.code));
+  saveTrash(); save(); rebuildUsedSet();
+}
+
+async function restoreRecord(code){
+  const item = trash.filter(r => r.code === code);
+  if (!item.length) return;
+  restoreList(item);
+  render();
+  toast(code + ' 을(를) 되돌렸습니다.', 'success', '복원 완료');
+}
+
+async function restoreAll(){
+  if (!trash.length){ toast('휴지통이 비어 있습니다.', 'info'); return; }
+  const n = trash.length;
+  const ok = await confirmModal({
+    title: '전체 복원',
+    message: '휴지통의 ' + n.toLocaleString() + '건을 모두 목록으로 되돌립니다.',
+    okText: '전체 복원'
+  });
+  if (!ok) return;
+  restoreList(trash.slice());
+  setStatusFilter('all'); page = 1;
+  render();
+  toast(n.toLocaleString() + '건을 되돌렸습니다.', 'success', '복원 완료');
+}
+
+async function emptyTrash(){
+  if (!trash.length){ toast('휴지통이 비어 있습니다.', 'info'); return; }
+  const n = trash.length;
+  const ok = await confirmModal({
+    title: '휴지통 비우기',
+    message: '휴지통의 ' + n.toLocaleString() + '건을 완전히 지웁니다.\n' +
+             '이 작업은 되돌릴 수 없습니다.',
+    okText: '완전히 삭제', danger: true
+  });
+  if (!ok){ toast('취소했습니다.', 'info'); return; }
+  trash = [];
+  saveTrash(); rebuildUsedSet();
+  page = 1; render();
+  toast(n.toLocaleString() + '건을 완전히 삭제했습니다.', 'success', '휴지통 비움');
 }
 
 function bulkFromInput(){
@@ -842,6 +1070,8 @@ $('file-import').onchange = e => {
   e.target.value = '';
 };
 $('btn-clear').onclick = clearAll;
+$('btn-restore-all').onclick = restoreAll;
+$('btn-empty-trash').onclick = emptyTrash;
 
 $('search').oninput = () => { page = 1; renderTable(); };
 $('search').onkeydown = e => { if (e.key === 'Escape'){ $('search').value = ''; page = 1; renderTable(); } };
@@ -858,6 +1088,7 @@ const NAV_ACTIONS = {
   'view-all':  () => showView('all'),
   'view-free': () => showView('free'),
   'view-used': () => showView('used'),
+  'view-trash':() => showView('trash'),
   'issue':     () => issueOne(),
   'dupcheck':  duplicateCheck,
   'export':    exportJSON,
@@ -879,7 +1110,9 @@ window.__mzcd = {
   get records(){ return records; },
   get lastToast(){ return lastToast; },
   get statusFilter(){ return statusFilter; },
+  get trash(){ return trash; },
   filtered, setStatusFilter, showView,
+  restoreRecord, restoreAll, emptyTrash, daysLeft, purgeExpired,
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
 };
 
