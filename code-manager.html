@@ -9,9 +9,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%232563eb'/%3E%3Cg%20fill='%23fff'%3E%3Crect%20x='9'%20y='23'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='9'%20y='37'%20width='46'%20height='6'%20rx='3'/%3E%3Crect%20x='19'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3Crect%20x='39'%20y='9'%20width='6'%20height='46'%20rx='3'/%3E%3C/g%3E%3C/svg%3E">
 <style>
   :root{
-    --bg:#f4f6fa; --panel:#fff; --ink:#171c26; --ink-2:#3d4characters;
+    --bg:#f4f6fa; --panel:#fff; --ink:#171c26;
     --muted:#78829a; --line:#e6eaf1; --line-2:#eef1f6;
-    --brand:#2563eb; --brand-ink:#fff; --brand-soft:#eef3ff; --brand-soft-2:#e3ebff;
+    --brand:#2563eb; --brand-soft:#eef3ff; --brand-soft-2:#e3ebff;
     --ok:#0f7b4f; --warn:#b45309; --err:#d92d20;
     --ok-bg:#e7f6ee; --warn-bg:#fdf3e3; --err-bg:#fdeceb; --info-bg:#eaf1fa;
     --r-lg:16px; --r-md:13px; --r-sm:10px;
@@ -27,10 +27,27 @@
   button{font:inherit}
   input,select,textarea{font:inherit}
 
-  /* ============ 레이아웃 ============ */
-  .shell{display:flex; min-height:100vh; align-items:flex-start}
+  /* ============ 로그인 게이트 ============ */
+  #gate{position:fixed; inset:0; z-index:5000; display:none; align-items:center; justify-content:center; background:var(--bg); padding:20px}
+  #gate.show{display:flex}
+  .gatebox{width:min(400px,100%); background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:28px}
+  .gatebox .mark{width:42px; height:42px; border-radius:11px; background:var(--brand); color:#fff; display:grid; place-items:center; font-weight:800; font-size:22px; line-height:1; margin-bottom:14px}
+  .gatebox h1{font-size:19px; margin:0 0 4px; font-weight:800; letter-spacing:-.02em}
+  .gatebox p.sub{margin:0 0 20px; color:var(--muted); font-size:13px}
+  .field{margin-bottom:11px}
+  .field label{display:block; font-size:12px; font-weight:600; color:#4a5260; margin-bottom:5px}
+  .field input{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm); background:#fff; color:var(--ink)}
+  .field input:focus{outline:2px solid #bcd0f8; outline-offset:-1px; border-color:#bcd0f8}
+  #gate .btn.primary{width:100%; padding:11px; margin-top:6px; justify-content:center}
+  .gatemsg{margin:12px 0 0; font-size:12.5px; min-height:18px}
+  .gatemsg.err{color:var(--err)}
+  .gatemsg.info{color:var(--muted)}
+  .gatefoot{margin:16px 0 0; padding-top:14px; border-top:1px solid var(--line-2); font-size:11.5px; color:var(--muted); line-height:1.6}
 
-  /* ============ 사이드바 ============ */
+  /* ============ 레이아웃 ============ */
+  .shell{display:none; min-height:100vh; align-items:flex-start}
+  .shell.show{display:flex}
+
   .sidebar{
     width:var(--sidebar); flex:0 0 var(--sidebar); background:var(--panel);
     border-right:1px solid var(--line); min-height:100vh;
@@ -47,13 +64,16 @@
 
   .whoami{padding:13px 6px; border-bottom:1px solid var(--line-2)}
   .whoami .meta{display:flex; gap:6px}
-  .whoami .store{margin:9px 2px 0; font-size:11px; color:var(--muted)}
   .whoami .chip{
     flex:1; background:var(--bg); border:1px solid var(--line-2); border-radius:8px;
     padding:6px 8px; text-align:center;
   }
   .whoami .chip b{display:block; font-size:14px; font-variant-numeric:tabular-nums}
   .whoami .chip span{font-size:10px; color:var(--muted)}
+  .whoami .me{display:flex; align-items:center; gap:7px; margin:11px 2px 0; font-size:11.5px; color:var(--muted)}
+  .whoami .me b{color:var(--ink); font-weight:600}
+  .whoami .me button{margin-left:auto; padding:3px 9px; font-size:11px; border-radius:6px; border:1px solid var(--line); background:#fff; color:#4a5260; cursor:pointer}
+  .whoami .me button:hover{background:var(--bg)}
 
   .nav{padding-top:12px; overflow-y:auto}
   .nav .grp{font-size:11px; color:#9aa3b5; font-weight:700; padding:10px 10px 5px; letter-spacing:.02em}
@@ -72,41 +92,31 @@
   .navbtn.on .cnt{background:#fff; color:var(--brand)}
   .navbtn.warn{color:var(--err)}
   .navbtn.warn:hover{background:var(--err-bg)}
-
   .sidefoot{margin-top:auto; padding:12px 10px 0; border-top:1px solid var(--line-2); font-size:11px; color:var(--muted)}
 
-  /* ============ 본문 ============ */
   .main{flex:1; min-width:0; padding:26px 26px 70px}
-  .phead{margin-bottom:20px}
+  .phead{margin-bottom:20px; display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap}
   .phead h1{font-size:23px; margin:0 0 3px; letter-spacing:-.02em; font-weight:800}
   .phead h1 i{font-style:normal; color:var(--brand)}
   .phead p{margin:0; color:var(--muted); font-size:13px}
+  .phead .sync{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted)}
 
-  /* 내 현황 패널 */
-  .statpanel{
-    background:var(--brand-soft); border:1px solid var(--brand-soft-2);
-    border-radius:var(--r-lg); padding:15px; margin-bottom:16px;
-  }
+  .statpanel{background:var(--brand-soft); border:1px solid var(--brand-soft-2); border-radius:var(--r-lg); padding:15px; margin-bottom:16px}
   .statpanel > h2{font-size:13px; margin:0 0 11px 3px; font-weight:700; color:#2c3752}
   .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:11px}
   .stat{background:var(--panel); border:1px solid #dfe7fb; border-radius:var(--r-md); padding:13px 15px}
   .stat .k{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:5px}
   .stat .v{font-size:25px; font-weight:800; margin-top:1px; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
   .stat .c{font-size:11px; color:#9aa3b5; margin-top:1px}
-  .stat.is-warn .v{color:var(--err)}
 
-  /* 카드 */
   .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:17px 18px; margin-bottom:16px}
   .card > h2{font-size:14.5px; margin:0 0 13px; font-weight:700; display:flex; align-items:center; gap:7px}
   .card > h2 .sp{margin-left:auto; font-size:12px; font-weight:600; color:var(--muted)}
 
-  /* 액션 타일 */
   .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(124px,1fr)); gap:10px}
-  .tile{
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--r-md);
-    padding:15px 8px 12px; cursor:pointer; text-align:center; transition:.12s;
-  }
+  .tile{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-md); padding:15px 8px 12px; cursor:pointer; text-align:center; transition:.12s}
   .tile:hover{background:var(--bg); border-color:#d4dbe8; transform:translateY(-1px)}
+  .tile:disabled{opacity:.5; cursor:not-allowed; transform:none}
   .tile .ic{font-size:23px; line-height:1.2; display:block}
   .tile .lb{display:block; margin-top:6px; font-size:12.5px; font-weight:600; color:#3b4557}
   .tile.pri{background:var(--brand); border-color:var(--brand)}
@@ -115,53 +125,37 @@
   .tile.dgr .lb{color:var(--err)}
   .tile.dgr:hover{background:var(--err-bg); border-color:#f5c2bd}
 
-  .bulkbar{
-    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
-    margin-top:11px; padding:11px 13px; background:var(--bg);
-    border:1px solid var(--line-2); border-radius:var(--r-md);
-  }
+  .bulkbar{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:11px; padding:11px 13px; background:var(--bg); border:1px solid var(--line-2); border-radius:var(--r-md)}
   .bulkbar .lb{font-size:12.5px; font-weight:600; color:#3b4557}
   .bulkbar input{width:94px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:#fff}
   .bulkbar .unit{font-size:12.5px; color:var(--muted); margin-left:-3px}
-  .btn{padding:7px 15px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; font-size:13px; font-weight:600}
+  .btn{padding:7px 15px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px}
   .btn:hover{background:#f2f4f7}
   .btn.primary{background:var(--brand); border-color:var(--brand); color:#fff}
   .btn.primary:hover{background:#1d55d4}
+  .btn.danger{background:var(--err); border-color:var(--err); color:#fff}
+  .btn.danger:hover{background:#b42318}
   .btn:disabled{opacity:.45; cursor:not-allowed}
   .hint{color:var(--muted); font-size:12px; margin:10px 0 0}
   .hint code{background:var(--bg); border:1px solid var(--line-2); border-radius:5px; padding:1px 5px; font-size:11.5px}
 
-  /* 보기 전환 탭 */
   .tabs{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px}
-  .tab{
-    display:inline-flex; align-items:center; gap:7px;
-    padding:8px 15px; border:1px solid var(--line); border-radius:999px;
-    background:#fff; color:#4a5260; font-weight:600; font-size:13.5px; cursor:pointer;
-  }
+  .tab{display:inline-flex; align-items:center; gap:7px; padding:8px 15px; border:1px solid var(--line); border-radius:999px; background:#fff; color:#4a5260; font-weight:600; font-size:13.5px; cursor:pointer}
   .tab:hover{background:var(--bg)}
   .tab.active{background:var(--brand); border-color:var(--brand); color:#fff}
   .tab.active:hover{background:#1d55d4}
-  .tab .badge{
-    display:inline-block; min-width:21px; padding:1px 7px; border-radius:999px;
-    background:var(--line-2); color:#4a5260; font-size:11.5px; font-weight:700;
-    font-variant-numeric:tabular-nums; text-align:center;
-  }
+  .tab .badge{display:inline-block; min-width:21px; padding:1px 7px; border-radius:999px; background:var(--line-2); color:#4a5260; font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; text-align:center}
   .tab.active .badge{background:rgba(255,255,255,.26); color:#fff}
 
-  /* 검색창 */
   .searchbar{position:relative; display:flex; align-items:center; margin-bottom:9px}
   .searchbar svg{position:absolute; left:13px; width:16px; height:16px; stroke:var(--muted); fill:none; stroke-width:2; pointer-events:none}
-  .searchbar input{
-    width:100%; padding:11px 88px 11px 38px; font-size:14.5px; border-radius:var(--r-sm);
-    border:1px solid var(--line); background:#fff; color:var(--ink);
-  }
+  .searchbar input{width:100%; padding:11px 88px 11px 38px; font-size:14.5px; border-radius:var(--r-sm); border:1px solid var(--line); background:#fff; color:var(--ink)}
   .searchbar input:focus{outline:2px solid #bcd0f8; outline-offset:-1px; border-color:#bcd0f8}
   .searchbar .clear{position:absolute; right:8px; padding:5px 11px; font-size:12.5px; border-radius:7px; display:none}
-  .searchbar .clear.show{display:block}
+  .searchbar .clear.show{display:inline-flex}
   .findings{margin:0 0 10px; color:var(--muted); font-size:12.5px; min-height:19px}
   .findings b{color:var(--ink)}
 
-  /* 표 */
   table{width:100%; border-collapse:collapse; font-size:13px}
   th,td{border-bottom:1px solid var(--line-2); padding:8px 9px; text-align:left; vertical-align:middle}
   th{background:#fafbfd; font-weight:700; color:#5a6478; white-space:nowrap; position:sticky; top:0; z-index:1; font-size:12px}
@@ -169,24 +163,22 @@
   td input:hover{border-color:var(--line)}
   td input:focus{border-color:#bcd0f8; background:#fff; outline:none}
   td.nowrap{white-space:nowrap}
-  td.nowrap button{white-space:nowrap}
+  td.ro{color:#3b4557; white-space:nowrap; max-width:210px; overflow:hidden; text-overflow:ellipsis}
+  td.ro.empty{color:#b3bacb}
+  .pickbtn{padding:4px 10px; border-radius:7px; border:1px dashed #c2cde0; background:#fff; color:var(--brand); cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap}
+  .pickbtn:hover{background:var(--brand-soft)}
   .tablewrap{overflow:auto; max-height:60vh; border:1px solid var(--line); border-radius:var(--r-md)}
-  .code-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; white-space:nowrap; color:#1f2b45}
+  .code-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; white-space:nowrap; color:#1f2b45; cursor:pointer}
   .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:600; white-space:nowrap}
   .pill.free{background:var(--info-bg); color:#1b4f8a}
   .pill.used{background:var(--ok-bg); color:var(--ok)}
-  .del{padding:4px 10px; border-radius:7px; border:1px solid #f0c7c3; background:#fff; color:var(--err); cursor:pointer; font-size:12px; font-weight:600}
+  .del{padding:4px 10px; border-radius:7px; border:1px solid #f0c7c3; background:#fff; color:var(--err); cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap}
   .del:hover{background:var(--err-bg)}
   .empty{padding:38px; text-align:center; color:var(--muted)}
   .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:11px; color:var(--muted); font-size:12.5px}
 
-  /* Toast — alert() 대체 */
   #toasts{position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:360px}
-  .toast{
-    background:var(--panel); border:1px solid var(--line); border-left-width:4px;
-    border-radius:var(--r-sm); padding:11px 14px; box-shadow:0 8px 24px rgba(16,24,40,.13);
-    animation:slidein .18s ease-out;
-  }
+  .toast{background:var(--panel); border:1px solid var(--line); border-left-width:4px; border-radius:var(--r-sm); padding:11px 14px; box-shadow:0 8px 24px rgba(16,24,40,.13); animation:slidein .18s ease-out}
   .toast.success{border-left-color:var(--ok); background:var(--ok-bg)}
   .toast.error{border-left-color:var(--err); background:var(--err-bg)}
   .toast.warn{border-left-color:var(--warn); background:var(--warn-bg)}
@@ -195,19 +187,28 @@
   .toast .m{font-size:13px; color:#3a424e; white-space:pre-line}
   @keyframes slidein{from{opacity:0; transform:translateX(14px)} to{opacity:1; transform:none}}
 
-  /* Modal — confirm() 대체 */
-  #modal-root{position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; background:rgba(16,24,40,.44)}
+  #modal-root{position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; background:rgba(16,24,40,.44); padding:20px}
   #modal-root.open{display:flex}
-  .modal{background:var(--panel); border-radius:var(--r-lg); width:min(440px,92vw); padding:23px; box-shadow:0 18px 50px rgba(16,24,40,.28)}
+  .modal{background:var(--panel); border-radius:var(--r-lg); width:min(440px,100%); padding:23px; box-shadow:0 18px 50px rgba(16,24,40,.28)}
+  .modal.wide{width:min(620px,100%)}
   .modal h3{margin:0 0 8px; font-size:16px; font-weight:700}
   .modal p{margin:0 0 17px; color:#3a424e; white-space:pre-line; font-size:13.5px}
   .modal .acts{display:flex; gap:8px; justify-content:flex-end}
-  .modal .btn.danger{background:var(--err); border-color:var(--err); color:#fff}
-  .modal .btn.danger:hover{background:#b42318}
 
-  /* 반응형 */
+  .picker input.q{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm); margin-bottom:11px}
+  .picker input.q:focus{outline:2px solid #bcd0f8; outline-offset:-1px; border-color:#bcd0f8}
+  .picklist{max-height:46vh; overflow:auto; border:1px solid var(--line-2); border-radius:var(--r-md)}
+  .pickrow{display:block; width:100%; text-align:left; padding:9px 12px; border:0; border-bottom:1px solid var(--line-2); background:#fff; cursor:pointer}
+  .pickrow:last-child{border-bottom:0}
+  .pickrow:hover{background:var(--brand-soft)}
+  .pickrow .t{font-weight:600; font-size:13.5px}
+  .pickrow .s{font-size:12px; color:var(--muted)}
+  .pickempty{padding:26px; text-align:center; color:var(--muted); font-size:13px}
+
+  .loading{padding:46px; text-align:center; color:var(--muted)}
+
   @media (max-width:900px){
-    .shell{display:block}
+    .shell.show{display:block}
     .sidebar{width:auto; flex:none; min-height:0; position:static; border-right:0; border-bottom:1px solid var(--line); padding:14px}
     .nav{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:4px; padding-top:10px}
     .nav .grp{display:none}
@@ -217,9 +218,32 @@
 </style>
 </head>
 <body>
-<div class="shell">
 
-  <!-- ================= 사이드바 ================= -->
+<!-- ================= 로그인 게이트 ================= -->
+<div id="gate" class="show">
+  <form class="gatebox" id="loginform">
+    <div class="mark">#</div>
+    <h1>MZCD 코드 관리</h1>
+    <p class="sub">사내 계정으로 로그인해 주세요.</p>
+    <div class="field">
+      <label for="g-email">이메일</label>
+      <input type="email" id="g-email" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="g-pw">비밀번호</label>
+      <input type="password" id="g-pw" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn primary" id="g-submit" disabled>로그인</button>
+    <p class="gatemsg info" id="g-msg">연결 중…</p>
+    <p class="gatefoot">
+      허브에서 쓰시는 계정과 동일합니다.<br>
+      코드 목록은 사내 직원(관리자·직원) 계정에만 보입니다.
+    </p>
+  </form>
+</div>
+
+<!-- ================= 본 화면 ================= -->
+<div class="shell" id="shell">
   <aside class="sidebar">
     <div class="brand">
       <div class="mark">#</div>
@@ -235,7 +259,10 @@
         <div class="chip"><b id="side-free">0</b><span>미사용</span></div>
         <div class="chip"><b id="side-used">0</b><span>사용중</span></div>
       </div>
-      <p class="store">💾 이 브라우저에 저장됨</p>
+      <div class="me">
+        <span>👤 <b id="me-name">—</b></span>
+        <button id="btn-logout">로그아웃</button>
+      </div>
     </div>
 
     <nav class="nav" id="sidenav">
@@ -246,30 +273,30 @@
 
       <div class="grp">코드 발급</div>
       <button class="navbtn" data-act="issue"><span class="ic">📌</span>새 코드 발급</button>
-      <button class="navbtn" data-act="dupcheck"><span class="ic">🔍</span>중복 코드 검사</button>
+      <button class="navbtn" data-act="copyfree"><span class="ic">📋</span>미사용 코드 복사</button>
 
       <div class="grp">데이터</div>
-      <button class="navbtn" data-act="export"><span class="ic">⬇️</span>JSON 내보내기</button>
-      <button class="navbtn" data-act="import"><span class="ic">⬆️</span>JSON 가져오기</button>
-      <button class="navbtn warn" data-act="clear"><span class="ic">🗑️</span>전체 삭제</button>
+      <button class="navbtn" data-act="refresh"><span class="ic">🔄</span>새로고침</button>
+      <button class="navbtn" data-act="export"><span class="ic">⬇️</span>CSV 내보내기</button>
     </nav>
 
     <div class="sidefoot">
       코드 형식 <b>#MZCD######</b><br>
-      데이터는 이 브라우저에만 저장됩니다.
+      팀 공용 DB에 저장됩니다.
     </div>
   </aside>
 
-  <!-- ================= 본문 ================= -->
   <main class="main">
     <div class="phead">
-      <h1>MZCD 음원 <i>코드 관리</i></h1>
-      <p>유튜브 영상 설명란 코드와 음원 DB 매칭 · 코드 형식 <b>#MZCD######</b> (뒤 6자리 랜덤 숫자)</p>
+      <div>
+        <h1>MZCD 음원 <i>코드 관리</i></h1>
+        <p>유튜브 영상 설명란 코드와 음원 DB 매칭 · 코드 형식 <b>#MZCD######</b> (뒤 6자리 랜덤 숫자)</p>
+      </div>
+      <div class="sync"><span id="synced">—</span></div>
     </div>
 
-    <!-- 내 현황 -->
     <section class="statpanel">
-      <h2>📊 내 현황</h2>
+      <h2>📊 팀 현황</h2>
       <div class="stats">
         <div class="stat">
           <div class="k">🗂️ 발급된 코드</div>
@@ -286,25 +313,22 @@
           <div class="v" id="stat-used">0</div>
           <div class="c">유튜브 URL이 입력된 코드</div>
         </div>
-        <div class="stat is-warn">
-          <div class="k">⚠️ 중복 코드</div>
-          <div class="v" id="stat-dup">0</div>
-          <div class="c">최대 조합 <span id="stat-max">1,000,000</span>개</div>
+        <div class="stat">
+          <div class="k">🎼 음원 연결됨</div>
+          <div class="v" id="stat-linked">0</div>
+          <div class="c">음원 DB와 매칭된 코드</div>
         </div>
       </div>
     </section>
 
-    <!-- 코드 발급 -->
     <section class="card">
       <h2>⚡ 코드 발급</h2>
       <div class="tiles">
         <button class="tile pri" id="btn-issue" data-testid="issue"><span class="ic">📌</span><span class="lb">새 코드 발급</span></button>
-        <button class="tile" id="btn-dupcheck" data-testid="dupcheck"><span class="ic">🔍</span><span class="lb">중복 코드 검사</span></button>
-        <button class="tile" id="btn-export" data-testid="export"><span class="ic">⬇️</span><span class="lb">JSON 내보내기</span></button>
-        <button class="tile" id="btn-import" data-testid="import"><span class="ic">⬆️</span><span class="lb">JSON 가져오기</span></button>
-        <button class="tile dgr" id="btn-clear" data-testid="clear"><span class="ic">🗑️</span><span class="lb">전체 삭제</span></button>
+        <button class="tile" id="btn-copyfree" data-testid="copyfree"><span class="ic">📋</span><span class="lb">미사용 코드 복사</span></button>
+        <button class="tile" id="btn-refresh" data-testid="refresh"><span class="ic">🔄</span><span class="lb">새로고침</span></button>
+        <button class="tile" id="btn-export" data-testid="export"><span class="ic">⬇️</span><span class="lb">CSV 내보내기</span></button>
       </div>
-      <input type="file" id="file-import" accept="application/json,.json" hidden>
 
       <div class="bulkbar">
         <span class="lb">📦 여러 개 한 번에</span>
@@ -316,27 +340,20 @@
       <p class="hint">발급된 코드는 유튜브 영상 설명란에 그대로 붙여넣으세요. 예: <code>#MZCD393049</code></p>
     </section>
 
-    <!-- 코드 마스터 -->
     <section class="card">
-      <h2>🎵 코드 마스터 <span class="sp">클릭하면 코드가 복사됩니다</span></h2>
+      <h2>🎵 코드 마스터 <span class="sp">코드를 클릭하면 복사됩니다</span></h2>
 
       <div class="tabs" id="tabs" role="tablist">
-        <button class="tab active" data-status="all" data-testid="tab-all" role="tab" aria-selected="true">
-          전체 <span class="badge" id="cnt-all">0</span>
-        </button>
-        <button class="tab" data-status="free" data-testid="tab-free" role="tab" aria-selected="false">
-          미사용 <span class="badge" id="cnt-free">0</span>
-        </button>
-        <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">
-          사용중 <span class="badge" id="cnt-used">0</span>
-        </button>
+        <button class="tab active" data-status="all" data-testid="tab-all" role="tab" aria-selected="true">전체 <span class="badge" id="cnt-all">0</span></button>
+        <button class="tab" data-status="free" data-testid="tab-free" role="tab" aria-selected="false">미사용 <span class="badge" id="cnt-free">0</span></button>
+        <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">사용중 <span class="badge" id="cnt-used">0</span></button>
       </div>
 
       <div class="searchbar">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
         <input id="search" data-testid="search" autocomplete="off"
-               placeholder="음원 제목 · 작곡가 · 아티스트 · 코드 · 영상 제목 · 채널명 검색">
-        <button class="btn clear" id="search-clear" data-testid="search-clear">지우기</button>
+               placeholder="음원 제목 · 아티스트 · 저작권자 · 코드 · 영상 제목 · 채널명 검색">
+        <button type="button" class="btn clear" id="search-clear" data-testid="search-clear">지우기</button>
       </div>
       <p class="findings" id="result-count"></p>
 
@@ -344,13 +361,14 @@
         <table>
           <thead>
             <tr>
-              <th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>등록일</th>
-              <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th>비고</th><th></th>
+              <th>코드</th><th>상태</th><th>음원</th><th>아티스트</th><th>저작권자</th>
+              <th>유튜브 URL</th><th>영상 제목</th><th>채널명</th><th>업로드일</th><th>비고</th><th>발급자</th><th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
         </table>
-        <div class="empty" id="empty">아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.</div>
+        <div class="loading" id="loading">불러오는 중…</div>
+        <div class="empty" id="empty" style="display:none">아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.</div>
       </div>
 
       <div class="pager">
@@ -365,15 +383,39 @@
 <div id="toasts" aria-live="polite" role="status"></div>
 <div id="modal-root" role="dialog" aria-modal="true"></div>
 
-<script>
-(function(){
-'use strict';
+<script type="module">
+/* 라이브러리 로딩 — 실패해도 빈 화면이 되지 않도록 대체 CDN과 안내를 둠 */
+let createClient = null;
+for (const url of ['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
+                   'https://esm.sh/@supabase/supabase-js@2',
+                   'https://unpkg.com/@supabase/supabase-js@2/dist/module/index.js']){
+  try { ({ createClient } = await import(url)); break; } catch (e) { /* 다음 후보 시도 */ }
+}
+if (!createClient){
+  const m = document.getElementById('g-msg');
+  m.className = 'gatemsg err';
+  m.textContent = '접속에 필요한 파일을 불러오지 못했습니다. 네트워크를 확인하고 새로고침해 주세요.';
+  throw new Error('supabase-js load failed');
+}
 
 /* =========================================================
-   1) 알림 시스템 — alert() 대체 (비차단 토스트)
+   0) 연결 설정
+   이 키는 브라우저에 공개되는 publishable 키입니다(공개돼도 되는 값).
+   실제 접근 통제는 서버의 RLS 정책이 담당합니다 — 사내 직원 계정이
+   아니면 코드 목록은 한 줄도 조회되지 않습니다.
    ========================================================= */
-const toastRoot = document.getElementById('toasts');
-// 자동화 도구/테스트에서 마지막 알림을 읽을 수 있도록 전역에 보관
+const SUPABASE_URL = 'https://dtcskjthfermzaszltvx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_636UKk6K6gzfCBJux0jRkg_M369B6VP';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const MAX_COMBOS = 1000000;
+const PAGE_SIZE = 100;
+const $ = id => document.getElementById(id);
+
+/* =========================================================
+   1) 토스트 / 모달
+   ========================================================= */
+const toastRoot = $('toasts');
 let lastToast = null;
 
 function toast(message, type = 'info', title = '', ttl = 3800){
@@ -381,7 +423,7 @@ function toast(message, type = 'info', title = '', ttl = 3800){
   el.className = 'toast ' + type;
   el.setAttribute('data-testid', 'toast');
   el.setAttribute('data-type', type);
-  if (title) {
+  if (title){
     const t = document.createElement('div');
     t.className = 't'; t.textContent = title; el.appendChild(t);
   }
@@ -397,12 +439,9 @@ function toast(message, type = 'info', title = '', ttl = 3800){
   return el;
 }
 
-/* =========================================================
-   2) 확인 모달 — confirm() / prompt() 대체 (Promise 기반)
-   ========================================================= */
-const modalRoot = document.getElementById('modal-root');
-
+const modalRoot = $('modal-root');
 function closeModal(){ modalRoot.classList.remove('open'); modalRoot.innerHTML = ''; }
+modalRoot.addEventListener('click', e => { if (e.target === modalRoot) closeModal(); });
 
 function confirmModal({ title, message, okText = '확인', cancelText = '취소', danger = false }){
   return new Promise(resolve => {
@@ -418,8 +457,7 @@ function confirmModal({ title, message, okText = '확인', cancelText = '취소'
     box.querySelector('p').textContent = message;
     const cancel = box.querySelector('[data-testid=modal-cancel]');
     const ok = box.querySelector('[data-testid=modal-ok]');
-    cancel.textContent = cancelText;
-    ok.textContent = okText;
+    cancel.textContent = cancelText; ok.textContent = okText;
     const done = v => { closeModal(); document.removeEventListener('keydown', onKey); resolve(v); };
     cancel.onclick = () => done(false);
     ok.onclick = () => done(true);
@@ -434,81 +472,108 @@ function confirmModal({ title, message, okText = '확인', cancelText = '취소'
   });
 }
 
-modalRoot.addEventListener('click', e => { if (e.target === modalRoot) closeModal(); });
-
 /* =========================================================
-   3) 데이터 계층
+   2) 상태
    ========================================================= */
-const STORAGE_KEY = 'mzcd_codes_v1';
-const PREFIX = '#MZCD';
-const DIGITS = 6;
-const MAX_COMBOS = Math.pow(10, DIGITS); // 1,000,000
-
-let records = [];
-let usedSet = new Set();
-
-function load(){
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    records = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(records)) records = [];
-  } catch (err) {
-    records = [];
-    toast('저장된 데이터를 읽지 못했습니다. 빈 목록으로 시작합니다.', 'error', '불러오기 실패');
-  }
-  usedSet = new Set(records.map(r => r.code));
-}
-
-function save(){
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    return true;
-  } catch (err) {
-    toast('브라우저 저장 공간이 부족합니다. JSON으로 내보낸 뒤 정리해 주세요.', 'error', '저장 실패', 7000);
-    return false;
-  }
-}
-
-function randomCode(){
-  const n = Math.floor(Math.random() * MAX_COMBOS);
-  return PREFIX + String(n).padStart(DIGITS, '0');
-}
-
-// 중복되지 않는 코드 1개 생성. 소진 시 null
-function newUniqueCode(){
-  if (usedSet.size >= MAX_COMBOS) return null;
-  for (let i = 0; i < 20000; i++){
-    const c = randomCode();
-    if (!usedSet.has(c)) return c;
-  }
-  return null;
-}
-
-function todayStr(){
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
-function makeRecord(code){
-  return { code, title:'', composer:'', artist:'', createdAt: todayStr(),
-           youtubeUrl:'', videoTitle:'', channel:'', uploadedAt:'', note:'' };
-}
-
-/* =========================================================
-   4) 렌더링
-   ========================================================= */
-const PAGE_SIZE = 100;
+let records = [];          // mzcd_list() 결과
+let musicOptions = [];     // mzcd_music_options() 결과
+let me = null;             // { name, email, role }
+let statusFilter = 'all';
 let page = 1;
 
-const $ = id => document.getElementById(id);
-const tbody = $('tbody');
+const isUsed = r => !!(r.youtube_url && r.youtube_url.trim());
+const nf = n => Number(n).toLocaleString();
 
-// 유튜브 URL이 채워져 있으면 '사용중', 비어 있으면 '미사용'
-function isUsed(r){ return !!(r.youtubeUrl && r.youtubeUrl.trim()); }
+/* =========================================================
+   3) 로그인 게이트
+   ========================================================= */
+const gate = $('gate'), shell = $('shell');
 
-// 현재 보기 탭: 'all' | 'free'(미사용) | 'used'(사용중)
-let statusFilter = 'all';
+function showGate(msg, cls){
+  shell.classList.remove('show');
+  gate.classList.add('show');
+  const el = $('g-msg');
+  el.textContent = msg || '';
+  el.className = 'gatemsg ' + (cls || '');
+}
 
+$('loginform').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('g-submit');
+  btn.disabled = true;
+  showGate('로그인 중…', 'info');
+  const { error } = await sb.auth.signInWithPassword({
+    email: $('g-email').value.trim(),
+    password: $('g-pw').value
+  });
+  btn.disabled = false;
+  if (error){
+    showGate('이메일 또는 비밀번호가 올바르지 않습니다.', 'err');
+    return;
+  }
+  $('g-pw').value = '';
+  await start();
+});
+
+$('btn-logout').onclick = async () => {
+  await sb.auth.signOut();
+  records = []; musicOptions = []; me = null;
+  showGate('로그아웃했습니다.', 'info');
+};
+
+async function start(){
+  $('g-submit').disabled = false;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session){ showGate('', ''); return; }
+
+  const { data: staff, error: staffErr } = await sb.rpc('is_mzcd_staff');
+  if (staffErr){
+    showGate('권한 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.', 'err');
+    return;
+  }
+  if (!staff){
+    await sb.auth.signOut();
+    showGate('이 도구는 사내 직원 계정만 사용할 수 있습니다.', 'err');
+    return;
+  }
+
+  const { data: prof } = await sb
+    .from('users').select('name, email, role').eq('id', session.user.id).maybeSingle();
+  me = prof || { name: session.user.email, email: session.user.email, role: '' };
+  $('me-name').textContent = me.name || me.email;
+  $('me-name').title = (me.email || '') + (me.role ? ' · ' + me.role : '');
+
+  gate.classList.remove('show');
+  shell.classList.add('show');
+  await Promise.all([refresh(), loadMusicOptions()]);
+}
+
+/* =========================================================
+   4) 데이터 로드
+   ========================================================= */
+async function refresh(showToast){
+  $('loading').style.display = 'block';
+  const { data, error } = await sb.rpc('mzcd_list');
+  $('loading').style.display = 'none';
+  if (error){
+    toast(error.message, 'error', '불러오기 실패', 7000);
+    return;
+  }
+  records = data || [];
+  $('synced').textContent = '마지막 갱신 ' + new Date().toLocaleTimeString('ko-KR');
+  render();
+  if (showToast) toast(nf(records.length) + '건을 불러왔습니다.', 'success', '새로고침 완료', 2000);
+}
+
+async function loadMusicOptions(){
+  const { data, error } = await sb.rpc('mzcd_music_options');
+  if (error){ toast(error.message, 'warn', '음원 목록 불러오기 실패', 6000); return; }
+  musicOptions = data || [];
+}
+
+/* =========================================================
+   5) 렌더링
+   ========================================================= */
 function setStatusFilter(v){
   statusFilter = v;
   for (const t of document.querySelectorAll('#tabs .tab')){
@@ -522,10 +587,10 @@ function setStatusFilter(v){
   }
 }
 
-// 검색 대상 필드
 function haystack(r){
-  return (r.title + ' ' + (r.composer || '') + ' ' + r.artist + ' ' +
-          r.code + ' ' + r.videoTitle + ' ' + r.channel + ' ' + (r.note || '')).toLowerCase();
+  return [r.code, r.music_title, r.music_artist, r.music_holders,
+          r.music_album, r.video_title, r.channel, r.note, r.created_by_name]
+    .map(x => x || '').join(' ').toLowerCase();
 }
 
 function filtered(){
@@ -538,46 +603,40 @@ function filtered(){
   });
 }
 
-function countDuplicates(){
-  const seen = new Set(); let dup = 0;
-  for (const r of records){
-    if (seen.has(r.code)) dup++; else seen.add(r.code);
-  }
-  return dup;
-}
+const TAB_LABEL = { all:'전체', free:'미사용', used:'사용중' };
 
 function renderStats(){
-  const dup = countDuplicates();
-  let used = 0;
-  for (const r of records) if (isUsed(r)) used++;
+  let used = 0, linked = 0;
+  for (const r of records){ if (isUsed(r)) used++; if (r.music_id) linked++; }
   const free = records.length - used;
-
-  const nAll = records.length.toLocaleString();
-  const nFree = free.toLocaleString();
-  const nUsed = used.toLocaleString();
+  const nAll = nf(records.length), nFree = nf(free), nUsed = nf(used);
 
   $('stat-issued').textContent = nAll;
   $('stat-free').textContent = nFree;
   $('stat-used').textContent = nUsed;
-  $('stat-max').textContent = MAX_COMBOS.toLocaleString();
-  $('stat-left').textContent = Math.max(0, MAX_COMBOS - usedSet.size).toLocaleString();
-  $('stat-dup').textContent = dup.toLocaleString();
+  $('stat-linked').textContent = nf(linked);
+  $('stat-left').textContent = nf(Math.max(0, MAX_COMBOS - records.length));
 
-  $('cnt-all').textContent = nAll;
-  $('cnt-free').textContent = nFree;
-  $('cnt-used').textContent = nUsed;
-
-  $('nav-all').textContent = nAll;
-  $('nav-free').textContent = nFree;
-  $('nav-used').textContent = nUsed;
-
-  $('side-total').textContent = nAll;
-  $('side-free').textContent = nFree;
-  $('side-used').textContent = nUsed;
+  for (const id of ['cnt-all','nav-all','side-total']) $(id).textContent = nAll;
+  for (const id of ['cnt-free','nav-free','side-free']) $(id).textContent = nFree;
+  for (const id of ['cnt-used','nav-used','side-used']) $(id).textContent = nUsed;
 }
 
-const FIELDS = ['title','composer','artist','createdAt','youtubeUrl','videoTitle','channel','uploadedAt','note'];
-const TAB_LABEL = { all:'전체', free:'미사용', used:'사용중' };
+const EDITABLE = [
+  { f:'youtube_url', w:'186px', type:'url'  },
+  { f:'video_title', w:'150px', type:'text' },
+  { f:'channel',     w:'110px', type:'text' },
+  { f:'uploaded_at', w:'132px', type:'date' },
+  { f:'note',        w:'110px', type:'text' }
+];
+
+function roCell(text, cls){
+  const td = document.createElement('td');
+  td.className = 'ro' + (text ? '' : ' empty') + (cls ? ' ' + cls : '');
+  td.textContent = text || '—';
+  if (text) td.title = text;
+  return td;
+}
 
 function renderTable(){
   const list = filtered();
@@ -598,9 +657,9 @@ function renderTable(){
     $('result-count').textContent = '검색 결과 0건';
   } else {
     $('result-count').innerHTML =
-      (q ? '“' + q.replace(/[<>&]/g, '') + '” 검색 결과 ' : TAB_LABEL[statusFilter] + ' ') +
-      '<b>' + list.length.toLocaleString() + '건</b>' +
-      (pages > 1 ? ' · ' + pages.toLocaleString() + '페이지 중 ' + page.toLocaleString() + '페이지' : '');
+      (q ? '“' + q.replace(/[<>&]/g,'') + '” 검색 결과 ' : TAB_LABEL[statusFilter] + ' ') +
+      '<b>' + nf(list.length) + '건</b>' +
+      (pages > 1 ? ' · ' + nf(pages) + '페이지 중 ' + nf(page) + '페이지' : '');
   }
   $('empty').style.display = list.length ? 'none' : 'block';
   $('page-info').textContent = page + ' / ' + pages;
@@ -616,8 +675,7 @@ function renderTable(){
     tdCode.className = 'code-cell';
     tdCode.textContent = r.code;
     tdCode.title = '클릭하면 복사됩니다';
-    tdCode.style.cursor = 'pointer';
-    tdCode.onclick = () => copyCode(r.code);
+    tdCode.onclick = () => copyText(r.code, r.code + ' 을(를) 복사했습니다.');
     tr.appendChild(tdCode);
 
     const tdSt = document.createElement('td');
@@ -629,30 +687,40 @@ function renderTable(){
     tdSt.appendChild(pill);
     tr.appendChild(tdSt);
 
-    for (const f of FIELDS){
+    // 음원 — 읽기 전용, 버튼으로 음원 DB에서 선택
+    const tdMusic = document.createElement('td');
+    tdMusic.className = 'nowrap';
+    const pick = document.createElement('button');
+    pick.className = 'pickbtn';
+    pick.textContent = r.music_title || '음원 선택';
+    pick.title = r.music_title ? '클릭해서 바꾸기' : '음원 DB에서 고르기';
+    pick.onclick = () => openPicker(r);
+    tdMusic.appendChild(pick);
+    tr.appendChild(tdMusic);
+
+    tr.appendChild(roCell(r.music_artist));
+    tr.appendChild(roCell(r.music_holders));
+
+    for (const { f, w, type } of EDITABLE){
       const td = document.createElement('td');
       const inp = document.createElement('input');
+      inp.type = type;
       inp.value = r[f] || '';
       inp.dataset.field = f;
-      const MINW = { title:'130px', composer:'96px', artist:'96px', createdAt:'96px',
-                     youtubeUrl:'186px', videoTitle:'150px', channel:'110px',
-                     uploadedAt:'96px', note:'110px' };
-      if (MINW[f]) inp.style.minWidth = MINW[f];
-      inp.addEventListener('change', () => {
-        r[f] = inp.value;
-        save();
-        render(); // 유튜브 URL이 바뀌면 상태·건수도 같이 갱신
-      });
+      inp.style.minWidth = w;
+      inp.addEventListener('change', () => saveField(r, f, inp));
       td.appendChild(inp);
       tr.appendChild(td);
     }
+
+    tr.appendChild(roCell(r.created_by_name));
 
     const tdDel = document.createElement('td');
     tdDel.className = 'nowrap';
     const del = document.createElement('button');
     del.className = 'del';
     del.textContent = '삭제';
-    del.onclick = () => removeRecord(r.code);
+    del.onclick = () => removeRecord(r);
     tdDel.appendChild(del);
     tr.appendChild(tdDel);
 
@@ -660,209 +728,194 @@ function renderTable(){
   }
   tbody.replaceChildren(frag);
 }
+const tbody = $('tbody');
 
 function render(){ renderStats(); renderTable(); }
 
 /* =========================================================
-   5) 동작
+   6) 쓰기 동작
    ========================================================= */
-async function copyCode(code){
+async function saveField(r, field, inp){
+  const value = inp.value.trim() === '' ? null : inp.value;
+  const prev = r[field];
+  const { error } = await sb.from('mzcd_codes').update({ [field]: value }).eq('code', r.code);
+  if (error){
+    inp.value = prev || '';
+    toast(error.message, 'error', '저장 실패', 7000);
+    return;
+  }
+  r[field] = value;
+  render();
+}
+
+async function openPicker(r){
+  modalRoot.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'modal wide picker';
+  box.innerHTML =
+    '<h3>음원 선택</h3>' +
+    '<p style="margin-bottom:12px">' + r.code + ' 에 연결할 음원을 고르세요.</p>' +
+    '<input class="q" placeholder="제목 · 아티스트 · 앨범 검색" autocomplete="off">' +
+    '<div class="picklist"></div>' +
+    '<div class="acts" style="margin-top:14px">' +
+    '<button class="btn" data-x="cancel">취소</button>' +
+    '<button class="btn" data-x="unlink">연결 해제</button>' +
+    '</div>';
+  const q = box.querySelector('.q');
+  const list = box.querySelector('.picklist');
+
+  function draw(){
+    const s = q.value.trim().toLowerCase();
+    const hits = musicOptions.filter(m =>
+      !s || [m.title, m.artist, m.album, m.holders].map(x => x || '').join(' ').toLowerCase().includes(s)
+    ).slice(0, 200);
+    list.replaceChildren();
+    if (!hits.length){
+      const e = document.createElement('div');
+      e.className = 'pickempty';
+      e.textContent = musicOptions.length ? '일치하는 음원이 없습니다.' : '음원 목록을 불러오지 못했습니다.';
+      list.appendChild(e);
+      return;
+    }
+    for (const m of hits){
+      const b = document.createElement('button');
+      b.className = 'pickrow';
+      const t = document.createElement('div'); t.className = 't';
+      t.textContent = (m.stopped ? '⏸ ' : '') + (m.title || '(제목 없음)');
+      const s2 = document.createElement('div'); s2.className = 's';
+      s2.textContent = [m.stopped ? '유통 중단' : null, m.artist, m.album, m.holders]
+        .filter(Boolean).join(' · ') || '—';
+      b.append(t, s2);
+      b.onclick = () => link(m.id);
+      list.appendChild(b);
+    }
+  }
+  q.oninput = draw;
+  draw();
+
+  async function link(musicId){
+    const { error } = await sb.from('mzcd_codes').update({ music_id: musicId }).eq('code', r.code);
+    closeModal();
+    if (error){ toast(error.message, 'error', '연결 실패', 7000); return; }
+    await refresh();
+    toast(r.code + ' 의 음원을 연결했습니다.', 'success', '연결 완료', 2400);
+  }
+
+  box.querySelector('[data-x=cancel]').onclick = closeModal;
+  box.querySelector('[data-x=unlink]').onclick = () => link(null);
+  modalRoot.appendChild(box);
+  modalRoot.classList.add('open');
+  setTimeout(() => q.focus(), 40);
+}
+
+async function removeRecord(r){
+  const ok = await confirmModal({
+    title: '코드 삭제',
+    message: r.code + ' 을(를) 삭제합니다.\n팀 전체 목록에서 사라지고, 같은 번호가 나중에 다시 발급될 수 있습니다.',
+    okText: '삭제', danger: true
+  });
+  if (!ok) return;
+  const { error } = await sb.from('mzcd_codes').delete().eq('code', r.code);
+  if (error){ toast(error.message, 'error', '삭제 실패', 7000); return; }
+  await refresh();
+  toast(r.code + ' 을(를) 삭제했습니다.', 'success', '삭제 완료');
+}
+
+async function issue(n){
+  const { data, error } = await sb.rpc('mzcd_issue', { n });
+  if (error){ toast(error.message, 'error', '발급 실패', 7000); return null; }
+  const codes = (data || []).map(x => (typeof x === 'string' ? x : x.mzcd_issue));
+  await refresh();
+  setStatusFilter('all');
+  $('search').value = '';
+  page = 1;
+  renderTable();
+  return codes;
+}
+
+async function issueOne(){
+  const codes = await issue(1);
+  if (!codes || !codes.length) return;
+  await copyText(codes[0], codes[0] + ' · 클립보드에 복사했습니다.', '새 코드 발급 완료');
+}
+
+async function issueBulk(){
+  const n = parseInt($('bulk-count').value, 10);
+  if (!Number.isFinite(n) || n < 1){ toast('1 이상의 숫자를 입력하세요.', 'warn', '입력 확인'); return; }
+  if (n > 10000){ toast('한 번에 최대 10,000개까지 발급할 수 있습니다.', 'warn', '입력 확인'); return; }
+  const codes = await issue(n);
+  if (codes) toast(nf(codes.length) + '개의 코드를 발급했습니다.', 'success', '일괄 발급 완료');
+}
+
+async function copyText(text, msg, title){
   try {
-    await navigator.clipboard.writeText(code);
-    toast(code + ' 을(를) 클립보드에 복사했습니다.', 'success', '복사 완료', 2200);
+    await navigator.clipboard.writeText(text);
+    toast(msg, 'success', title || '복사 완료', 2600);
   } catch (err) {
     toast('클립보드 복사가 차단되었습니다. 직접 선택해 복사해 주세요.', 'warn', '복사 실패');
   }
 }
 
-function issueOne(){
-  const code = newUniqueCode();
-  if (!code){
-    toast('사용 가능한 코드를 찾지 못했습니다. 조합이 거의 소진되었습니다.', 'error', '발급 불가');
-    return null;
-  }
-  const rec = makeRecord(code);
-  records.unshift(rec);
-  usedSet.add(code);
-  save();
-  page = 1;
-  $('search').value = '';
-  setStatusFilter('all');
-  render();
-  toast(code, 'success', '새 코드 발급 완료');
-  return code;
+async function copyFree(){
+  const free = records.filter(r => !isUsed(r));
+  if (!free.length){ toast('미사용 코드가 없습니다. 먼저 발급해 주세요.', 'info'); return; }
+  const n = Math.min(free.length, Math.max(1, parseInt($('bulk-count').value, 10) || 10));
+  const codes = free.slice(0, n).map(r => r.code);
+  await copyText(codes.join('\n'), '미사용 코드 ' + n + '개를 복사했습니다.', '복사 완료');
 }
 
-function issueBulk(n){
-  const made = [];
-  for (let i = 0; i < n; i++){
-    const code = newUniqueCode();
-    if (!code) break;
-    usedSet.add(code);
-    made.push(makeRecord(code));
-  }
-  if (!made.length){
-    toast('발급할 수 있는 코드가 없습니다.', 'error', '발급 불가');
-    return;
-  }
-  records = made.concat(records);
-  save();
-  page = 1;
-  render();
-  toast(made.length.toLocaleString() + '개의 코드를 발급했습니다.' +
-        (made.length < n ? '\n(조합 소진으로 요청보다 적게 발급됨)' : ''),
-        'success', '일괄 발급 완료');
-}
-
-function duplicateCheck(){
-  const seen = new Map();
-  const dups = [];
-  records.forEach((r, i) => {
-    if (seen.has(r.code)) dups.push(r.code);
-    else seen.set(r.code, i);
-  });
-  if (!dups.length){
-    toast('중복된 코드가 없습니다. 총 ' + records.length.toLocaleString() + '개 모두 고유합니다.',
-          'success', '중복 검사 완료');
-  } else {
-    const uniq = Array.from(new Set(dups));
-    toast('중복 ' + dups.length + '건 발견:\n' + uniq.slice(0,8).join(', ') +
-          (uniq.length > 8 ? ' 외 ' + (uniq.length-8) + '건' : ''),
-          'error', '중복 발견', 8000);
-  }
-}
-
-function exportJSON(){
-  const payload = {
-    schema: 'mzcd-code-manager',
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    count: records.length,
-    records: records
+function exportCSV(){
+  const cols = [
+    ['code','코드'], ['music_title','음원 제목'], ['music_artist','아티스트'],
+    ['music_holders','저작권자'], ['youtube_url','유튜브 URL'], ['video_title','영상 제목'],
+    ['channel','채널명'], ['uploaded_at','업로드일'], ['note','비고'],
+    ['created_by_name','발급자'], ['created_at','발급일시']
+  ];
+  const esc = v => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const rows = [cols.map(c => c[1]).join(',')];
+  for (const r of filtered()) rows.push(cols.map(c => esc(r[c[0]])).join(','));
+  // 엑셀에서 한글이 깨지지 않도록 BOM 추가
+  const blob = new Blob(['﻿' + rows.join('\n')], { type:'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'mzcd-codes-' + todayStr() + '.json';
+  a.download = 'mzcd-codes-' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  toast(records.length.toLocaleString() + '건을 JSON 파일로 저장했습니다.', 'success', '내보내기 완료');
-}
-
-async function importJSON(file){
-  let parsed;
-  try {
-    parsed = JSON.parse(await file.text());
-  } catch (err) {
-    toast('JSON 형식이 올바르지 않습니다.', 'error', '가져오기 실패');
-    return;
-  }
-  const incoming = Array.isArray(parsed) ? parsed : parsed.records;
-  if (!Array.isArray(incoming)){
-    toast('records 배열을 찾을 수 없습니다.', 'error', '가져오기 실패');
-    return;
-  }
-  const valid = incoming.filter(r => r && typeof r.code === 'string' && /^#MZCD\d{6}$/.test(r.code));
-  if (!valid.length){
-    toast('유효한 MZCD 코드가 없습니다.', 'warn', '가져올 항목 없음');
-    return;
-  }
-  const ok = await confirmModal({
-    title: 'JSON 가져오기',
-    message: valid.length.toLocaleString() + '건을 현재 목록에 병합합니다.\n' +
-             '이미 있는 코드는 건너뜁니다. 계속할까요?',
-    okText: '병합하기'
-  });
-  if (!ok){ toast('가져오기를 취소했습니다.', 'info'); return; }
-
-  let added = 0, skipped = 0;
-  for (const r of valid){
-    if (usedSet.has(r.code)){ skipped++; continue; }
-    usedSet.add(r.code);
-    records.push(Object.assign(makeRecord(r.code), r));
-    added++;
-  }
-  save(); render();
-  toast('추가 ' + added.toLocaleString() + '건 · 중복으로 건너뜀 ' + skipped.toLocaleString() + '건',
-        'success', '가져오기 완료');
-}
-
-async function removeRecord(code){
-  const ok = await confirmModal({
-    title: '코드 삭제',
-    message: code + ' 을(를) 목록에서 삭제합니다.\n삭제한 코드는 다시 발급될 수 있습니다.',
-    okText: '삭제', danger: true
-  });
-  if (!ok) return;
-  records = records.filter(r => r.code !== code);
-  usedSet.delete(code);
-  save(); render();
-  toast(code + ' 을(를) 삭제했습니다.', 'success', '삭제 완료');
-}
-
-async function clearAll(){
-  if (!records.length){ toast('삭제할 데이터가 없습니다.', 'info'); return; }
-  const ok = await confirmModal({
-    title: '전체 삭제',
-    message: '발급된 ' + records.length.toLocaleString() + '건을 모두 삭제합니다.\n' +
-             '이 작업은 되돌릴 수 없습니다. 먼저 JSON으로 내보냈는지 확인하세요.',
-    okText: '전체 삭제', danger: true
-  });
-  if (!ok){ toast('전체 삭제를 취소했습니다.', 'info'); return; }
-  records = []; usedSet = new Set();
-  save(); render();
-  toast('모든 코드를 삭제했습니다.', 'success', '삭제 완료');
-}
-
-function bulkFromInput(){
-  const n = parseInt($('bulk-count').value, 10);
-  if (!Number.isFinite(n) || n < 1){ toast('1 이상의 숫자를 입력하세요.', 'warn', '입력 확인'); return; }
-  if (n > 10000){ toast('한 번에 최대 10,000개까지 발급할 수 있습니다.', 'warn', '입력 확인'); return; }
-  issueBulk(n);
-}
-
-function showView(v){
-  setStatusFilter(v);
-  page = 1;
-  renderTable();
+  toast(nf(filtered().length) + '건을 CSV로 저장했습니다. 엑셀에서 바로 열립니다.', 'success', '내보내기 완료');
 }
 
 /* =========================================================
-   6) 이벤트 연결
+   7) 이벤트 연결
    ========================================================= */
-$('btn-issue').onclick = () => issueOne();
-$('btn-bulk').onclick = bulkFromInput;
-$('bulk-count').onkeydown = e => { if (e.key === 'Enter') bulkFromInput(); };
-$('btn-dupcheck').onclick = duplicateCheck;
-$('btn-export').onclick = exportJSON;
-$('btn-import').onclick = () => $('file-import').click();
-$('file-import').onchange = e => {
-  const f = e.target.files && e.target.files[0];
-  if (f) importJSON(f);
-  e.target.value = '';
-};
-$('btn-clear').onclick = clearAll;
+function showView(v){ setStatusFilter(v); page = 1; renderTable(); }
 
-$('search').oninput = () => { page = 1; renderTable(); };
-$('search').onkeydown = e => { if (e.key === 'Escape'){ $('search').value = ''; page = 1; renderTable(); } };
+$('btn-issue').onclick    = issueOne;
+$('btn-bulk').onclick     = issueBulk;
+$('bulk-count').onkeydown = e => { if (e.key === 'Enter') issueBulk(); };
+$('btn-copyfree').onclick = copyFree;
+$('btn-refresh').onclick  = () => refresh(true);
+$('btn-export').onclick   = exportCSV;
+
+$('search').oninput    = () => { page = 1; renderTable(); };
+$('search').onkeydown  = e => { if (e.key === 'Escape'){ $('search').value = ''; page = 1; renderTable(); } };
 $('search-clear').onclick = () => { $('search').value = ''; page = 1; renderTable(); $('search').focus(); };
 
 $('tabs').onclick = e => {
   const btn = e.target.closest('.tab');
-  if (!btn) return;
-  showView(btn.dataset.status);
+  if (btn) showView(btn.dataset.status);
 };
 
-// 사이드바 메뉴 — 보기 전환 + 주요 동작
 const NAV_ACTIONS = {
   'view-all':  () => showView('all'),
   'view-free': () => showView('free'),
   'view-used': () => showView('used'),
-  'issue':     () => issueOne(),
-  'dupcheck':  duplicateCheck,
-  'export':    exportJSON,
-  'import':    () => $('file-import').click(),
-  'clear':     clearAll
+  'issue':     issueOne,
+  'copyfree':  copyFree,
+  'refresh':   () => refresh(true),
+  'export':    exportCSV
 };
 $('sidenav').onclick = e => {
   const btn = e.target.closest('.navbtn');
@@ -874,18 +927,22 @@ $('sidenav').onclick = e => {
 $('prev').onclick = () => { if (page > 1){ page--; renderTable(); } };
 $('next').onclick = () => { page++; renderTable(); };
 
-/* 자동화 / 디버깅용 훅 — 브라우저 대화상자를 띄우지 않고 상태를 확인할 수 있음 */
+// 탭으로 돌아오면 팀원 변경사항 반영
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && shell.classList.contains('show')) refresh();
+});
+
+/* 자동화 / 디버깅용 훅 */
 window.__mzcd = {
   get records(){ return records; },
+  get musicOptions(){ return musicOptions; },
+  get me(){ return me; },
   get lastToast(){ return lastToast; },
   get statusFilter(){ return statusFilter; },
-  filtered, setStatusFilter, showView,
-  toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
+  sb, filtered, setStatusFilter, showView, refresh, toast
 };
 
-load();
-render();
-})();
+start();
 </script>
 </body>
 </html>
