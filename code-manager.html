@@ -47,7 +47,9 @@
 
   .whoami{padding:13px 6px; border-bottom:1px solid var(--line-2)}
   .whoami .meta{display:flex; gap:6px}
-  .whoami .store{margin:9px 2px 0; font-size:11px; color:var(--muted)}
+  .whoami .store{margin:9px 2px 0; font-size:11px; color:var(--muted); display:flex; align-items:center; gap:6px}
+  .whoami .store button{margin-left:auto; padding:2px 8px; font-size:10.5px; border-radius:6px; border:1px solid var(--line); background:#fff; color:#4a5260; cursor:pointer}
+  .whoami .store button:hover{background:var(--bg)}
   .whoami .chip{
     flex:1; background:var(--bg); border:1px solid var(--line-2); border-radius:8px;
     padding:6px 8px; text-align:center;
@@ -191,6 +193,21 @@
   .selbar.show{display:flex}
   .selbar b{font-size:14px}
   .selbar .sp{margin-left:auto}
+  /* ---- 로그인 ---- */
+  #gate{position:fixed; inset:0; z-index:5000; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:20px}
+  #gate.done{display:none}
+  .gatebox{width:min(400px,100%); background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:28px}
+  .gatebox .mark{width:42px; height:42px; border-radius:11px; background:var(--brand); color:#fff; display:grid; place-items:center; font-weight:800; font-size:22px; line-height:1; margin-bottom:14px}
+  .gatebox h1{font-size:19px; margin:0 0 4px; font-weight:800; letter-spacing:-.02em}
+  .gatebox p.sub{margin:0 0 20px; color:var(--muted); font-size:13px}
+  .field{margin-bottom:11px}
+  .field label{display:block; font-size:12px; font-weight:600; color:#4a5260; margin-bottom:5px}
+  .field input{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm); background:#fff; color:var(--ink)}
+  .field input:focus{outline:2px solid #bcd0f8; outline-offset:-1px; border-color:#bcd0f8}
+  #gate .btn.primary{width:100%; padding:11px; margin-top:6px; justify-content:center}
+  .gatemsg{margin:12px 0 0; font-size:12.5px; min-height:18px; color:var(--muted)}
+  .gatemsg.err{color:var(--err)}
+  body.loading-shell .shell{visibility:hidden}
   .trashfoot{
     display:flex; align-items:center; gap:10px; justify-content:flex-end;
     margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);
@@ -254,6 +271,24 @@
 </style>
 </head>
 <body>
+<div id="gate">
+  <form class="gatebox" id="loginform">
+    <div class="mark">#</div>
+    <h1>MZCD 코드 관리</h1>
+    <p class="sub">팀 공용 계정으로 로그인해 주세요.</p>
+    <div class="field">
+      <label for="g-email">이메일</label>
+      <input type="email" id="g-email" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="g-pw">비밀번호</label>
+      <input type="password" id="g-pw" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn primary" id="g-submit" disabled>로그인</button>
+    <p class="gatemsg" id="g-msg">연결 중…</p>
+  </form>
+</div>
+
 <div class="shell">
 
   <!-- ================= 사이드바 ================= -->
@@ -272,7 +307,7 @@
         <div class="chip"><b id="side-free">0</b><span>미배정</span></div>
         <div class="chip"><b id="side-used">0</b><span>배정됨</span></div>
       </div>
-      <p class="store">💾 이 브라우저에 저장됨</p>
+      <p class="store">☁️ <span id="who">팀 공용 저장소</span> <button id="btn-logout" type="button">로그아웃</button></p>
     </div>
 
     <nav class="nav" id="sidenav">
@@ -293,7 +328,7 @@
 
     <div class="sidefoot">
       코드 형식 <b>#MZCD#######</b><br>
-      마지막 한 자리는 오타 검증용입니다.
+      팀 공용 DB에 저장됩니다.
     </div>
   </aside>
 
@@ -423,7 +458,7 @@
 <div id="modal-root" role="dialog" aria-modal="true"></div>
 
 <script>
-(function(){
+(async function(){
 'use strict';
 
 /* =========================================================
@@ -496,86 +531,91 @@ modalRoot.addEventListener('click', e => { if (e.target === modalRoot) closeModa
 /* =========================================================
    3) 데이터 계층
    ========================================================= */
-const STORAGE_KEY = 'mzcd_codes_v1';
-const TRASH_KEY   = 'mzcd_trash_v1';
 const PREFIX = '#MZCD';
 const DIGITS = 6;          // 본체 6자리 + 검증 1자리
 const MAX_COMBOS = Math.pow(10, DIGITS); // 1,000,000
 const TRASH_DAYS = 30;                   // 휴지통 보관 기간
 const DAY_MS = 86400000;
 
+/* ---------- 팀 공용 저장소 (Supabase) ----------
+   아래 키는 브라우저에 공개되는 publishable 키입니다(공개돼도 되는 값).
+   실제 접근 통제는 서버의 RLS 정책이 담당합니다 — 로그인하지 않으면
+   코드 목록은 한 줄도 조회되지 않습니다.                                   */
+const SUPABASE_URL = 'https://brxejskhnqkmhjjumnmk.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_bljHnde-8FZRunV8FTzdiA_VMpElTYI';
+let sb = null;
+
 let records = [];
-let trash = [];      // 삭제된 코드. 각 항목에 deletedAt(ISO) 추가됨
+let trash = [];      // 삭제된 코드. deletedAt 이 채워져 있음
 let usedSet = new Set();
 
-// 휴지통 코드도 '이미 쓴 번호'로 취급해야 복원 시 번호가 겹치지 않음
+// 휴지통 코드도 '이미 쓴 번호'로 취급 (서버도 같은 테이블에 보관)
 function rebuildUsedSet(){
   usedSet = new Set(records.map(r => r.code));
   for (const r of trash) usedSet.add(r.code);
 }
 
-function load(){
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    records = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(records)) records = [];
-  } catch (err) {
-    records = [];
-    toast('저장된 데이터를 읽지 못했습니다. 빈 목록으로 시작합니다.', 'error', '불러오기 실패');
-  }
-  try {
-    const raw = localStorage.getItem(TRASH_KEY);
-    trash = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(trash)) trash = [];
-  } catch (err) {
-    trash = [];
-  }
-  purgeExpired();
-  rebuildUsedSet();
+function chunk(list, n){
+  const out = [];
+  for (let i = 0; i < list.length; i += n) out.push(list.slice(i, i + n));
+  return out;
 }
 
-// 30일 지난 항목만 조용히 정리
-function purgeExpired(){
-  const cutoff = Date.now() - TRASH_DAYS * DAY_MS;
-  const before = trash.length;
-  trash = trash.filter(r => {
-    const t = Date.parse(r.deletedAt || '');
-    return !Number.isFinite(t) || t >= cutoff;   // 날짜가 이상하면 지우지 않고 남겨둠
-  });
-  if (trash.length !== before) saveTrash();
-  return before - trash.length;
+function fail(error, title){
+  toast(error.message || String(error), 'error', title || '서버 오류', 7000);
+  return false;
+}
+
+// 서버에서 전체를 다시 읽어온다
+async function pullAll(){
+  const { data, error } = await sb.from('mzcd_codes')
+    .select('code,title,composer,artist,note,created_at,created_by,deleted_at')
+    .order('created_at', { ascending: false });
+  if (error) return fail(error, '불러오기 실패');
+  const all = (data || []).map(row => ({
+    code: row.code,
+    title: row.title || '', composer: row.composer || '', artist: row.artist || '',
+    note: row.note || '',
+    createdAt: (row.created_at || '').slice(0, 10),
+    createdBy: row.created_by || '',
+    deletedAt: row.deleted_at || null
+  }));
+  records = all.filter(r => !r.deletedAt);
+  trash   = all.filter(r =>  r.deletedAt);
+  rebuildUsedSet();
+  return true;
+}
+
+async function refresh(showToast){
+  const ok = await pullAll();
+  if (!ok) return false;
+  render();
+  if (showToast) toast(records.length.toLocaleString() + '건을 불러왔습니다.', 'success', '새로고침 완료', 2000);
+  return true;
+}
+
+// 휴지통 이동 / 복원 (deleted_at 만 바꾼다)
+async function setDeleted(codes, when){
+  for (const part of chunk(codes, 400)){
+    const { error } = await sb.from('mzcd_codes').update({ deleted_at: when }).in('code', part);
+    if (error) return fail(error, '저장 실패');
+  }
+  return true;
+}
+
+// 완전 삭제
+async function hardDelete(codes){
+  for (const part of chunk(codes, 400)){
+    const { error } = await sb.from('mzcd_codes').delete().in('code', part);
+    if (error) return fail(error, '삭제 실패');
+  }
+  return true;
 }
 
 function daysLeft(r){
   const t = Date.parse(r.deletedAt || '');
   if (!Number.isFinite(t)) return TRASH_DAYS;
   return Math.max(0, Math.ceil((t + TRASH_DAYS * DAY_MS - Date.now()) / DAY_MS));
-}
-
-function saveTrash(){
-  try {
-    localStorage.setItem(TRASH_KEY, JSON.stringify(trash));
-    return true;
-  } catch (err) {
-    toast('저장 공간이 부족해 휴지통을 기록하지 못했습니다.', 'error', '저장 실패', 7000);
-    return false;
-  }
-}
-
-function toTrash(list){
-  const stamp = new Date().toISOString();
-  for (const r of list) trash.unshift(Object.assign({}, r, { deletedAt: stamp }));
-  saveTrash();
-}
-
-function save(){
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    return true;
-  } catch (err) {
-    toast('브라우저 저장 공간이 부족합니다. JSON으로 내보낸 뒤 정리해 주세요.', 'error', '저장 실패', 7000);
-    return false;
-  }
 }
 
 // 마지막 한 자리는 앞 6자리로 계산한 검증 숫자(Luhn).
@@ -843,9 +883,12 @@ function renderTable(){
       inp.dataset.field = f;
       const MINW = { title:'190px', composer:'110px', artist:'110px', createdAt:'92px', note:'150px' };
       if (MINW[f]) inp.style.minWidth = MINW[f];
-      inp.addEventListener('change', () => {
-        r[f] = inp.value;
-        save();
+      inp.addEventListener('change', async () => {
+        const prev = r[f];
+        const val = inp.value;
+        const { error } = await sb.from('mzcd_codes').update({ [f]: val }).eq('code', r.code);
+        if (error){ inp.value = prev || ''; fail(error, '저장 실패'); return; }
+        r[f] = val;
         render(); // 음원 제목이 바뀌면 상태·건수도 같이 갱신
       });
       td.appendChild(inp);
@@ -942,46 +985,30 @@ async function copyCode(code){
   }
 }
 
-function issueOne(){
-  const code = newUniqueCode();
-  if (!code){
-    toast('사용 가능한 코드를 찾지 못했습니다. 조합이 거의 소진되었습니다.', 'error', '발급 불가');
-    return null;
-  }
-  const rec = makeRecord(code);
-  records.unshift(rec);
-  usedSet.add(code);
-  save();
+async function issueCodes(n){
+  const { data, error } = await sb.rpc('mzcd_issue', { n });
+  if (error){ fail(error, '발급 실패'); return null; }
+  await pullAll();
   page = 1;
   $('search').value = '';
+  clearSelection();
   showScreen('list');
   setStatusFilter('all');
   render();
-  toast(code, 'success', '새 코드 발급 완료');
-  return code;
+  return (data || []).map(x => (typeof x === 'string' ? x : x.mzcd_issue));
 }
 
-function issueBulk(n){
-  const made = [];
-  for (let i = 0; i < n; i++){
-    const code = newUniqueCode();
-    if (!code) break;
-    usedSet.add(code);
-    made.push(makeRecord(code));
-  }
-  if (!made.length){
-    toast('발급할 수 있는 코드가 없습니다.', 'error', '발급 불가');
-    return;
-  }
-  records = made.concat(records);
-  save();
-  page = 1;
-  showScreen('list');
-  setStatusFilter('all');
-  render();
-  toast(made.length.toLocaleString() + '개의 코드를 발급했습니다.' +
-        (made.length < n ? '\n(조합 소진으로 요청보다 적게 발급됨)' : ''),
-        'success', '일괄 발급 완료');
+async function issueOne(){
+  const codes = await issueCodes(1);
+  if (!codes || !codes.length) return null;
+  toast(codes[0], 'success', '새 코드 발급 완료');
+  return codes[0];
+}
+
+async function issueBulk(n){
+  const codes = await issueCodes(n);
+  if (!codes) return;
+  toast(codes.length.toLocaleString() + '개의 코드를 발급했습니다.', 'success', '일괄 발급 완료');
 }
 
 // 중복 + 검증문자 유효성을 한 번에 확인
@@ -1056,14 +1083,19 @@ async function importJSON(file){
   });
   if (!ok){ toast('가져오기를 취소했습니다.', 'info'); return; }
 
-  let added = 0, skipped = 0;
-  for (const r of valid){
-    if (usedSet.has(r.code)){ skipped++; continue; }
-    usedSet.add(r.code);
-    records.push(Object.assign(makeRecord(r.code), r));
-    added++;
+  const fresh = valid.filter(r => !usedSet.has(r.code));
+  const skipped = valid.length - fresh.length;
+  let added = 0;
+  for (const part of chunk(fresh, 400)){
+    const rows = part.map(r => ({
+      code: r.code, title: r.title || '', composer: r.composer || '',
+      artist: r.artist || '', note: r.note || ''
+    }));
+    const { error } = await sb.from('mzcd_codes').insert(rows);
+    if (error){ fail(error, '가져오기 실패'); break; }
+    added += rows.length;
   }
-  save(); render();
+  await refresh();
   toast('추가 ' + added.toLocaleString() + '건 · 중복으로 건너뜀 ' + skipped.toLocaleString() + '건',
         'success', '가져오기 완료');
 }
@@ -1075,10 +1107,8 @@ async function removeRecord(code){
     okText: '휴지통으로', danger: true
   });
   if (!ok) return;
-  const moved = records.filter(r => r.code === code);
-  records = records.filter(r => r.code !== code);
-  toTrash(moved);           // 코드 번호는 usedSet에 그대로 남겨 둠 (복원 대비)
-  save(); render();
+  if (!await setDeleted([code], new Date().toISOString())) return;
+  await refresh();
   toast(code + ' 을(를) 휴지통으로 옮겼습니다.', 'success', '삭제 완료');
 }
 
@@ -1094,9 +1124,8 @@ async function trashSelected(){
     okText: '휴지통으로', danger: true
   });
   if (!ok){ toast('취소했습니다.', 'info'); return; }
-  records = records.filter(r => !set.has(r.code));
-  toTrash(moved);
-  clearSelection(); save(); render();
+  if (!await setDeleted(moved.map(r => r.code), new Date().toISOString())) return;
+  clearSelection(); await refresh();
   toast(moved.length.toLocaleString() + '건을 휴지통으로 옮겼습니다.', 'success', '삭제 완료');
 }
 
@@ -1104,8 +1133,8 @@ async function restoreSelected(){
   const set = new Set(selected);
   const items = trash.filter(r => set.has(r.code));
   if (!items.length){ toast('선택된 코드가 없습니다.', 'info'); return; }
-  restoreList(items);
-  clearSelection(); render();
+  if (!await setDeleted(items.map(r => r.code), null)) return;
+  clearSelection(); await refresh();
   toast(items.length.toLocaleString() + '건을 되돌렸습니다.', 'success', '복원 완료');
 }
 
@@ -1120,30 +1149,15 @@ async function purgeSelected(){
     okText: '완전히 삭제', danger: true
   });
   if (!ok){ toast('취소했습니다.', 'info'); return; }
-  trash = trash.filter(r => !set.has(r.code));
-  clearSelection(); saveTrash(); rebuildUsedSet(); render();
+  if (!await hardDelete(items.map(r => r.code))) return;
+  clearSelection(); await refresh();
   toast(items.length.toLocaleString() + '건을 완전히 삭제했습니다.', 'success', '삭제 완료');
 }
 
 /* ---------- 휴지통 ---------- */
-function restoreList(list){
-  const back = [];
-  for (const r of list){
-    const rec = Object.assign({}, r);
-    delete rec.deletedAt;
-    back.push(rec);
-  }
-  records = back.concat(records);
-  const codes = new Set(list.map(r => r.code));
-  trash = trash.filter(r => !codes.has(r.code));
-  saveTrash(); save(); rebuildUsedSet();
-}
-
 async function restoreRecord(code){
-  const item = trash.filter(r => r.code === code);
-  if (!item.length) return;
-  restoreList(item);
-  render();
+  if (!await setDeleted([code], null)) return;
+  await refresh();
   toast(code + ' 을(를) 되돌렸습니다.', 'success', '복원 완료');
 }
 
@@ -1156,9 +1170,9 @@ async function restoreAll(){
     okText: '전체 복원'
   });
   if (!ok) return;
-  restoreList(trash.slice());
-  setStatusFilter('all'); page = 1;
-  render();
+  if (!await setDeleted(trash.map(r => r.code), null)) return;
+  setStatusFilter('all'); page = 1; clearSelection();
+  await refresh();
   toast(n.toLocaleString() + '건을 되돌렸습니다.', 'success', '복원 완료');
 }
 
@@ -1172,9 +1186,8 @@ async function emptyTrash(){
     okText: '전체 삭제', danger: true
   });
   if (!ok){ toast('취소했습니다.', 'info'); return; }
-  trash = [];
-  saveTrash(); rebuildUsedSet();
-  page = 1; render();
+  if (!await hardDelete(trash.map(r => r.code))) return;
+  page = 1; clearSelection(); await refresh();
   toast(n.toLocaleString() + '건을 완전히 삭제했습니다.', 'success', '휴지통 비움');
 }
 
@@ -1282,14 +1295,78 @@ window.__mzcd = {
   get screen(){ return screen; },
   filtered, setStatusFilter, showView, showScreen,
   get selected(){ return selected; },
-  restoreRecord, restoreAll, emptyTrash, daysLeft, purgeExpired,
+  get me(){ return me; },
+  restoreRecord, restoreAll, emptyTrash, daysLeft,
   trashSelected, restoreSelected, purgeSelected, clearSelection,
-  isValidCode, checkDigit, randomCode,
-  toast, confirmModal, issueOne, issueBulk, duplicateCheck, render
+  isValidCode, checkDigit, randomCode, refresh,
+  toast, confirmModal, issueOne, issueBulk, duplicateCheck, render,
+  get sb(){ return sb; }
 };
 
-load();
-render();
+/* =========================================================
+   8) 로그인 → 데이터 불러오기
+   ========================================================= */
+let me = null;
+const gate = $('gate');
+
+function gateMsg(text, isErr){
+  const el = $('g-msg');
+  el.textContent = text || '';
+  el.className = 'gatemsg' + (isErr ? ' err' : '');
+}
+
+async function afterLogin(session){
+  me = session.user;
+  $('who').textContent = me.email || '팀 공용 저장소';
+  gate.classList.add('done');
+  await sb.rpc('mzcd_purge_trash');        // 30일 지난 휴지통 정리
+  await refresh();
+}
+
+$('loginform').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('g-submit').disabled = true;
+  gateMsg('로그인 중…');
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: $('g-email').value.trim(),
+    password: $('g-pw').value
+  });
+  $('g-submit').disabled = false;
+  if (error){ gateMsg('이메일 또는 비밀번호가 올바르지 않습니다.', true); return; }
+  $('g-pw').value = '';
+  gateMsg('');
+  await afterLogin(data.session);
+});
+
+$('btn-logout').onclick = async () => {
+  await sb.auth.signOut();
+  records = []; trash = []; me = null;
+  render();
+  gate.classList.remove('done');
+  gateMsg('로그아웃했습니다.');
+};
+
+// 다른 탭에 갔다 오면 팀원 변경사항 반영
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && me) refresh();
+});
+
+(async function boot(){
+  let createClient = null;
+  for (const url of ['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
+                     'https://esm.sh/@supabase/supabase-js@2']){
+    try { ({ createClient } = await import(url)); break; } catch (err) { /* 다음 후보 */ }
+  }
+  if (!createClient){
+    gateMsg('접속에 필요한 파일을 불러오지 못했습니다. 네트워크를 확인하고 새로고침해 주세요.', true);
+    return;
+  }
+  sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+  $('g-submit').disabled = false;
+  gateMsg('');
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) await afterLogin(session);   // 이미 로그인돼 있으면 바로 통과
+})();
 })();
 </script>
 </body>
