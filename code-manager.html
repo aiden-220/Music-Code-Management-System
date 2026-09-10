@@ -304,17 +304,23 @@
     .sidefoot{display:none}
     .main{padding:18px 14px 60px}
   }
+
+  /* 권한: 회원(읽기 전용)에게는 관리 기능을 숨긴다. 실제 차단은 서버(RLS·트리거)가 한다 */
+  body.role-member .admin-only{display:none !important}
+  .rolebadge{font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; white-space:nowrap;
+             background:#eef2f7; color:#4a5260; border:1px solid var(--line)}
+  body.role-admin .rolebadge{background:#e8f0fe; color:#1b64da; border-color:#b9c6d8}
 </style>
 </head>
-<body>
+<body class="role-member">
 <div id="gate">
   <form class="gatebox" id="loginform">
     <div class="mark">#</div>
     <h1>MZCD 코드 관리</h1>
-    <p class="sub">팀 공용 계정으로 로그인해 주세요.</p>
+    <p class="sub">관리자 또는 회원 계정으로 로그인해 주세요.</p>
     <div class="field">
-      <label for="g-email">이메일</label>
-      <input type="email" id="g-email" autocomplete="username" required>
+      <label for="g-email">아이디 또는 이메일</label>
+      <input type="text" id="g-email" autocomplete="username" autocapitalize="off" spellcheck="false" required>
     </div>
     <div class="field">
       <label for="g-pw">비밀번호</label>
@@ -343,7 +349,7 @@
         <div class="chip"><b id="side-free">0</b><span>미배정</span></div>
         <div class="chip"><b id="side-used">0</b><span>배정됨</span></div>
       </div>
-      <p class="store">☁️ <span id="who">팀 공용 저장소</span> <button id="btn-logout" type="button">로그아웃</button></p>
+      <p class="store">☁️ <span id="who">팀 공용 저장소</span> <span class="rolebadge" id="role-badge"></span> <button id="btn-logout" type="button">로그아웃</button></p>
     </div>
 
     <nav class="nav" id="sidenav">
@@ -352,14 +358,14 @@
       <button class="navbtn" data-act="view-free"><span class="ic">🆕</span>미배정 코드<span class="cnt" id="nav-free">0</span></button>
       <button class="navbtn" data-act="view-used"><span class="ic">✅</span>배정된 코드<span class="cnt" id="nav-used">0</span></button>
 
-      <div class="grp">코드 발급</div>
-      <button class="navbtn" data-act="go-issue"><span class="ic">📌</span>코드 발급</button>
-      <button class="navbtn" data-act="dupcheck"><span class="ic">🔍</span>코드 검사</button>
+      <div class="grp admin-only">코드 발급</div>
+      <button class="navbtn admin-only" data-act="go-issue"><span class="ic">📌</span>코드 발급</button>
+      <button class="navbtn admin-only" data-act="dupcheck"><span class="ic">🔍</span>코드 검사</button>
 
-      <div class="grp">데이터</div>
-      <button class="navbtn" data-act="export"><span class="ic">⬇️</span>JSON 내보내기</button>
-      <button class="navbtn" data-act="import"><span class="ic">⬆️</span>JSON 가져오기</button>
-      <button class="navbtn" data-act="view-trash"><span class="ic">🗑️</span>휴지통<span class="cnt" id="nav-trash">0</span></button>
+      <div class="grp admin-only">데이터</div>
+      <button class="navbtn admin-only" data-act="export"><span class="ic">⬇️</span>JSON 내보내기</button>
+      <button class="navbtn admin-only" data-act="import"><span class="ic">⬆️</span>JSON 가져오기</button>
+      <button class="navbtn admin-only" data-act="view-trash"><span class="ic">🗑️</span>휴지통<span class="cnt" id="nav-trash">0</span></button>
     </nav>
 
     <div class="sidefoot">
@@ -403,7 +409,7 @@
     </section>
 
     <!-- 코드 발급 -->
-    <section class="card screen" id="screen-issue" hidden>
+    <section class="card screen admin-only" id="screen-issue" hidden>
       <h2>⚡ 코드 발급</h2>
       <div class="tiles">
         <button class="tile pri" id="btn-issue" data-testid="issue"><span class="ic">📌</span><span class="lb">새 코드 발급</span></button>
@@ -425,7 +431,7 @@
 
     <!-- 코드 마스터 -->
     <section class="card screen" id="screen-list">
-      <h2>🎵 코드 마스터 <span class="sp">클릭하면 코드가 복사됩니다</span></h2>
+      <h2>🎵 코드 마스터 <span class="sp">코드를 클릭하면 복사됩니다 · ▶ 로 음원을 들을 수 있습니다</span></h2>
 
       <div class="tabs" id="tabs" role="tablist">
         <button class="tab active" data-status="all" data-testid="tab-all" role="tab" aria-selected="true">
@@ -437,12 +443,12 @@
         <button class="tab" data-status="used" data-testid="tab-used" role="tab" aria-selected="false">
           배정됨 <span class="badge" id="cnt-used">0</span>
         </button>
-        <button class="tab trash" data-status="trash" data-testid="tab-trash" role="tab" aria-selected="false">
+        <button class="tab trash admin-only" data-status="trash" data-testid="tab-trash" role="tab" aria-selected="false">
           🗑️ 휴지통 <span class="badge" id="cnt-trash">0</span>
         </button>
       </div>
 
-      <div class="trashbar" id="trashbar" style="display:none">
+      <div class="trashbar admin-only" id="trashbar" style="display:none">
         <span>🗑️ 삭제한 코드는 <b>30일</b> 동안 여기 보관됩니다. 그 전에 언제든 되돌릴 수 있습니다.</span>
         <button class="btn" id="btn-restore-all" data-testid="restore-all">전체 복원</button>
       </div>
@@ -455,7 +461,7 @@
       </div>
       <p class="findings" id="result-count"></p>
 
-      <div class="selbar" id="selbar">
+      <div class="selbar admin-only" id="selbar">
         <span><b id="sel-count">0</b>건 선택됨</span>
         <button class="btn" id="sel-all-filtered" data-testid="sel-all-filtered">이 조건 전체 선택</button>
         <span class="sp"></span>
@@ -464,7 +470,7 @@
         <button class="btn" id="sel-clear" data-testid="sel-clear">선택 해제</button>
       </div>
 
-      <div class="audiobar" id="audiobar">
+      <div class="audiobar admin-only" id="audiobar">
         <span>🎧 음원 폴더를 여기에 끌어다 놓으면 파일명에서 코드를 찾아 자동으로 붙입니다.</span>
         <span class="sp"></span>
         <button class="btn" id="btn-audio-folder" data-testid="audio-folder">📁 폴더 선택</button>
@@ -476,7 +482,7 @@
         <table>
           <thead>
             <tr>
-              <th class="cb"><input type="checkbox" id="check-all" title="이 페이지 전체 선택"></th><th>코드</th><th>상태</th><th class="audcol">음원</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>발급일</th><th id="th-last">비고</th><th></th>
+              <th class="cb admin-only"><input type="checkbox" id="check-all" title="이 페이지 전체 선택"></th><th>코드</th><th>상태</th><th class="audcol">음원</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>발급일</th><th id="th-last">비고</th><th class="admin-only"></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -490,7 +496,7 @@
         <button class="btn" id="next">다음</button>
       </div>
 
-      <div class="trashfoot" id="trashfoot" style="display:none">
+      <div class="trashfoot admin-only" id="trashfoot" style="display:none">
         <span>되돌릴 수 없습니다. 휴지통에 있는 코드를 한꺼번에 완전히 지웁니다.</span>
         <button class="btn danger" id="btn-empty-trash" data-testid="empty-trash">🗑️ 전체 삭제</button>
       </div>
@@ -597,6 +603,46 @@ const SUPABASE_URL = 'https://brxejskhnqkmhjjumnmk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_bljHnde-8FZRunV8FTzdiA_VMpElTYI';
 let sb = null;
 
+/* ---------- 권한 ----------
+   role 은 로그인 후 서버 함수 mzcd_my_role() 로 받아온다.
+   확인하지 못하면 'member'(읽기 전용)로 연다 — 실패 시 권한이 넓어지지 않게.
+   화면에서 숨기는 것은 편의일 뿐, 실제 차단은 서버(RLS + 쓰기 차단 트리거)가 한다. */
+const ID_DOMAIN = 'mzcd.whrcompany.com';   // 아이디 로그인용 내부 이메일 도메인 (메일 발송 없음)
+let role = 'member';                        // 'admin' | 'member'
+const isAdmin = () => role === 'admin';
+
+function adminOnly(){
+  if (isAdmin()) return true;
+  toast('관리자만 할 수 있는 작업입니다.', 'warn', '권한 없음');
+  return false;
+}
+
+// 'HR_Company' → 'hr_company@mzcd.whrcompany.com', 이메일은 그대로
+function toLoginEmail(v){
+  const t = String(v || '').trim().toLowerCase();
+  return t.includes('@') ? t : t + '@' + ID_DOMAIN;
+}
+
+function displayName(user){
+  if (!user) return '';
+  const md = user.user_metadata || {};
+  if (md.display_name) return md.display_name;
+  const e = user.email || '';
+  return e.endsWith('@' + ID_DOMAIN) ? e.slice(0, -(ID_DOMAIN.length + 1)) : e;
+}
+
+function applyRole(){
+  document.body.classList.toggle('role-admin', isAdmin());
+  document.body.classList.toggle('role-member', !isAdmin());
+  $('role-badge').textContent = isAdmin() ? '관리자' : '회원';
+  if (!isAdmin()){
+    // 회원이 관리 화면에 머물러 있지 않게
+    if (screen !== 'list') showScreen('list');
+    if (statusFilter === 'trash') setStatusFilter('all');
+    clearSelection();
+  }
+}
+
 let records = [];
 let trash = [];      // 삭제된 코드. deletedAt 이 채워져 있음
 let usedSet = new Set();
@@ -651,6 +697,7 @@ async function refresh(showToast){
 
 // 휴지통 이동 / 복원 (deleted_at 만 바꾼다)
 async function setDeleted(codes, when){
+  if (!adminOnly()) return false;
   for (const part of chunk(codes, 400)){
     const { error } = await sb.from('mzcd_codes').update({ deleted_at: when }).in('code', part);
     if (error) return fail(error, '저장 실패');
@@ -660,6 +707,7 @@ async function setDeleted(codes, when){
 
 // 완전 삭제 — 코드 행과 함께 붙어 있던 음원 파일도 지운다
 async function hardDelete(codes){
+  if (!adminOnly()) return false;
   const set = new Set(codes);
   const paths = [];
   for (const r of records.concat(trash)){
@@ -900,7 +948,9 @@ function renderTable(){
   }
 
   if (!records.length){
-    $('empty').textContent = '아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.';
+    $('empty').textContent = isAdmin()
+      ? '아직 발급된 코드가 없습니다. “새 코드 발급”을 눌러 시작하세요.'
+      : '아직 발급된 코드가 없습니다.';
     $('result-count').textContent = '';
   } else if (!list.length){
     $('empty').textContent = q
@@ -923,7 +973,8 @@ function renderTable(){
     const tr = document.createElement('tr');
     tr.dataset.code = r.code;
     if (selected.has(r.code)) tr.classList.add('picked');
-    tr.appendChild(makeCheckCell(r));
+    const admin = isAdmin();
+    if (admin) tr.appendChild(makeCheckCell(r));
 
     const tdCode = document.createElement('td');
     tdCode.className = 'code-cell';
@@ -945,6 +996,15 @@ function renderTable(){
 
     for (const f of FIELDS){
       const td = document.createElement('td');
+      if (!admin){
+        // 회원: 읽기 전용 글자
+        const v = r[f] || '';
+        td.className = 'ro' + (v ? '' : ' dim');
+        td.textContent = v || '—';
+        if (v) td.title = v;
+        tr.appendChild(td);
+        continue;
+      }
       const inp = document.createElement('input');
       inp.value = r[f] || '';
       inp.dataset.field = f;
@@ -952,6 +1012,7 @@ function renderTable(){
       if (MINW[f]) inp.style.minWidth = MINW[f];
       inp.addEventListener('change', async () => {
         const prev = r[f];
+        if (!adminOnly()){ inp.value = prev || ''; return; }
         const val = inp.value;
         const { error } = await sb.from('mzcd_codes').update({ [f]: val }).eq('code', r.code);
         if (error){ inp.value = prev || ''; fail(error, '저장 실패'); return; }
@@ -962,14 +1023,16 @@ function renderTable(){
       tr.appendChild(td);
     }
 
-    const tdDel = document.createElement('td');
-    tdDel.className = 'nowrap';
-    const del = document.createElement('button');
-    del.className = 'del';
-    del.textContent = '삭제';
-    del.onclick = () => removeRecord(r.code);
-    tdDel.appendChild(del);
-    tr.appendChild(tdDel);
+    if (admin){
+      const tdDel = document.createElement('td');
+      tdDel.className = 'nowrap';
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '삭제';
+      del.onclick = () => removeRecord(r.code);
+      tdDel.appendChild(del);
+      tr.appendChild(tdDel);
+    }
 
     frag.appendChild(tr);
   }
@@ -1141,6 +1204,7 @@ async function toPreview(file){
 /* --- 업로드 / 삭제 --- */
 async function uploadAudio(rec, file){
   if (!rec || !file) return false;
+  if (!adminOnly()) return false;
   const prepared = await toPreview(file);
   if (prepared.blob.size > MAX_UPLOAD){
     toast(file.name + ' 은(는) 25MB를 넘어 올릴 수 없습니다.', 'warn', '건너뜀', 5000);
@@ -1173,6 +1237,7 @@ async function uploadAudio(rec, file){
 }
 
 async function removeAudio(rec){
+  if (!adminOnly()) return;
   const ok = await confirmModal({
     title: '음원 삭제',
     message: rec.code + ' 에 붙은 음원 파일을 지웁니다.\n코드와 정보는 그대로 남습니다.',
@@ -1257,6 +1322,12 @@ function makeAudioCell(r){
     play.textContent = on ? '❚❚' : '▶';
     if (on) play.classList.add('on');
     play.onclick = () => togglePlay(r);
+    if (!isAdmin()){
+      // 회원: 재생만
+      box.appendChild(play);
+      td.appendChild(box);
+      return td;
+    }
 
     const swap = document.createElement('button');
     swap.title = '다른 파일로 교체';
@@ -1269,6 +1340,10 @@ function makeAudioCell(r){
     del.onclick = () => removeAudio(r);
 
     box.append(play, swap, del);
+  } else if (!isAdmin()){
+    td.className = 'ro dim';
+    td.textContent = '—';
+    return td;
   } else {
     const add = document.createElement('button');
     add.className = 'add';
@@ -1283,6 +1358,7 @@ function makeAudioCell(r){
 }
 
 function pickOne(rec){
+  if (!adminOnly()) return;
   pendingRec = rec;
   const el = $('file-audio-one');
   el.value = '';
@@ -1390,6 +1466,7 @@ function matchModal(rows){
 }
 
 async function attachFolder(fileList){
+  if (!adminOnly()) return;
   const files = Array.from(fileList || []).filter(f => AUDIO_EXT.test(f.name));
   if (!files.length){
     toast('폴더에서 오디오 파일을 찾지 못했습니다.', 'warn', '붙일 파일 없음');
@@ -1472,6 +1549,7 @@ async function copyCode(code){
 }
 
 async function issueCodes(n){
+  if (!adminOnly()) return null;
   const { data, error } = await sb.rpc('mzcd_issue', { n });
   if (error){ fail(error, '발급 실패'); return null; }
   await pullAll();
@@ -1527,6 +1605,7 @@ function preview(list){
 }
 
 function exportJSON(){
+  if (!adminOnly()) return;
   const payload = {
     schema: 'mzcd-code-manager',
     version: 1,
@@ -1544,6 +1623,7 @@ function exportJSON(){
 }
 
 async function importJSON(file){
+  if (!adminOnly()) return;
   let parsed;
   try {
     parsed = JSON.parse(await file.text());
@@ -1587,6 +1667,7 @@ async function importJSON(file){
 }
 
 async function removeRecord(code){
+  if (!adminOnly()) return;
   const ok = await confirmModal({
     title: '코드 삭제',
     message: code + ' 을(를) 휴지통으로 옮깁니다.\n' + TRASH_DAYS + '일 안에는 휴지통에서 되돌릴 수 있습니다.',
@@ -1600,6 +1681,7 @@ async function removeRecord(code){
 
 /* ---------- 선택 일괄 처리 ---------- */
 async function trashSelected(){
+  if (!adminOnly()) return;
   const set = new Set(selected);
   const moved = records.filter(r => set.has(r.code));
   if (!moved.length){ toast('선택된 코드가 없습니다.', 'info'); return; }
@@ -1616,6 +1698,7 @@ async function trashSelected(){
 }
 
 async function restoreSelected(){
+  if (!adminOnly()) return;
   const set = new Set(selected);
   const items = trash.filter(r => set.has(r.code));
   if (!items.length){ toast('선택된 코드가 없습니다.', 'info'); return; }
@@ -1625,6 +1708,7 @@ async function restoreSelected(){
 }
 
 async function purgeSelected(){
+  if (!adminOnly()) return;
   const set = new Set(selected);
   const items = trash.filter(r => set.has(r.code));
   if (!items.length){ toast('선택된 코드가 없습니다.', 'info'); return; }
@@ -1642,12 +1726,14 @@ async function purgeSelected(){
 
 /* ---------- 휴지통 ---------- */
 async function restoreRecord(code){
+  if (!adminOnly()) return;
   if (!await setDeleted([code], null)) return;
   await refresh();
   toast(code + ' 을(를) 되돌렸습니다.', 'success', '복원 완료');
 }
 
 async function restoreAll(){
+  if (!adminOnly()) return;
   if (!trash.length){ toast('휴지통이 비어 있습니다.', 'info'); return; }
   const n = trash.length;
   const ok = await confirmModal({
@@ -1663,6 +1749,7 @@ async function restoreAll(){
 }
 
 async function emptyTrash(){
+  if (!adminOnly()) return;
   if (!trash.length){ toast('휴지통이 비어 있습니다.', 'info'); return; }
   const n = trash.length;
   const ok = await confirmModal({
@@ -1688,6 +1775,7 @@ function bulkFromInput(){
 let screen = 'list';
 
 function showScreen(name){
+  if (name === 'issue' && !isAdmin()) name = 'list';
   screen = name;
   $('screen-list').hidden  = name !== 'list';
   $('screen-issue').hidden = name !== 'issue';
@@ -1706,6 +1794,7 @@ function showScreen(name){
 }
 
 function showView(v){
+  if (v === 'trash' && !isAdmin()) v = 'all';
   showScreen('list');
   setStatusFilter(v);
   clearSelection();
@@ -1721,7 +1810,7 @@ $('btn-bulk').onclick = bulkFromInput;
 $('bulk-count').onkeydown = e => { if (e.key === 'Enter') bulkFromInput(); };
 $('btn-dupcheck').onclick = duplicateCheck;
 $('btn-export').onclick = exportJSON;
-$('btn-import').onclick = () => $('file-import').click();
+$('btn-import').onclick = () => { if (adminOnly()) $('file-import').click(); };
 $('file-import').onchange = e => {
   const f = e.target.files && e.target.files[0];
   if (f) importJSON(f);
@@ -1804,7 +1893,7 @@ const NAV_ACTIONS = {
   'go-issue':  () => showScreen('issue'),
   'dupcheck':  duplicateCheck,
   'export':    exportJSON,
-  'import':    () => $('file-import').click(),
+  'import':    () => { if (adminOnly()) $('file-import').click(); },
   'view-trash':() => showView('trash')
 };
 $('sidenav').onclick = e => {
@@ -1827,6 +1916,8 @@ window.__mzcd = {
   filtered, setStatusFilter, showView, showScreen,
   get selected(){ return selected; },
   get me(){ return me; },
+  get role(){ return role; },
+  toLoginEmail, displayName,
   restoreRecord, restoreAll, emptyTrash, daysLeft,
   trashSelected, restoreSelected, purgeSelected, clearSelection,
   isValidCode, checkDigit, randomCode, refresh,
@@ -1848,11 +1939,24 @@ function gateMsg(text, isErr){
   el.className = 'gatemsg' + (isErr ? ' err' : '');
 }
 
+async function fetchRole(){
+  try {
+    const { data, error } = await sb.rpc('mzcd_my_role');
+    if (error) throw error;
+    return data === 'admin' ? 'admin' : 'member';
+  } catch (err) {
+    toast('권한 정보를 확인하지 못해 읽기 전용으로 엽니다.', 'warn', '권한 확인 실패', 6000);
+    return 'member';
+  }
+}
+
 async function afterLogin(session){
   me = session.user;
-  $('who').textContent = me.email || '팀 공용 저장소';
+  role = await fetchRole();
+  applyRole();
+  $('who').textContent = displayName(me) || '팀 공용 저장소';
   gate.classList.add('done');
-  await sb.rpc('mzcd_purge_trash');        // 30일 지난 휴지통 정리
+  if (isAdmin()) await sb.rpc('mzcd_purge_trash');   // 30일 지난 휴지통 정리 (관리자만)
   await refresh();
 }
 
@@ -1861,11 +1965,11 @@ $('loginform').addEventListener('submit', async e => {
   $('g-submit').disabled = true;
   gateMsg('로그인 중…');
   const { data, error } = await sb.auth.signInWithPassword({
-    email: $('g-email').value.trim(),
+    email: toLoginEmail($('g-email').value),
     password: $('g-pw').value
   });
   $('g-submit').disabled = false;
-  if (error){ gateMsg('이메일 또는 비밀번호가 올바르지 않습니다.', true); return; }
+  if (error){ gateMsg('아이디(이메일) 또는 비밀번호가 올바르지 않습니다.', true); return; }
   $('g-pw').value = '';
   gateMsg('');
   await afterLogin(data.session);
@@ -1876,6 +1980,7 @@ $('btn-logout').onclick = async () => {
   signedCache.clear();
   await sb.auth.signOut();
   records = []; trash = []; me = null;
+  role = 'member'; applyRole();
   render();
   gate.classList.remove('done');
   gateMsg('로그아웃했습니다.');
