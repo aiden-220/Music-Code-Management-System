@@ -249,6 +249,42 @@
   .toast .m{font-size:13px; color:#3a424e; white-space:pre-line}
   @keyframes slidein{from{opacity:0; transform:translateX(14px)} to{opacity:1; transform:none}}
 
+  /* 음원 미리듣기 */
+  .aud{display:flex; gap:4px; align-items:center; white-space:nowrap}
+  .aud button{border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer;
+              width:26px; height:26px; line-height:1; font-size:12px; padding:0; color:#3a424e}
+  .aud button:hover{background:#f2f5f9}
+  .aud button.play{border-color:#b9c6d8; color:#1b64da; font-size:11px}
+  .aud button.play.on{background:#1b64da; border-color:#1b64da; color:#fff}
+  .aud button.add{color:#98a1ae}
+  th.audcol{width:104px}
+
+  .audiobar{display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+            padding:9px 12px; margin:0 0 10px; border:1px dashed var(--line);
+            border-radius:var(--r-md); background:#fbfcfe; font-size:12.5px; color:#5b6472}
+  .audiobar.drop{border-color:#1b64da; background:#eef4ff; color:#1b64da}
+  .audiobar .sp{flex:1}
+
+  #playerbar{position:fixed; left:0; right:0; bottom:0; z-index:9000; display:none;
+             align-items:center; gap:12px; padding:10px 16px; background:var(--panel);
+             border-top:1px solid var(--line); box-shadow:0 -6px 22px rgba(16,24,40,.10)}
+  #playerbar.on{display:flex}
+  #playerbar .pcode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; font-size:13px}
+  #playerbar .ptitle{color:#5b6472; font-size:12.5px; overflow:hidden; text-overflow:ellipsis;
+                     white-space:nowrap; max-width:30vw}
+  #playerbar audio{height:34px; flex:1; min-width:200px}
+
+  .modal.wide{width:min(780px,94vw)}
+  .matchlist{max-height:44vh; overflow:auto; border:1px solid var(--line);
+             border-radius:var(--r-md); margin:0 0 13px}
+  .matchlist table{width:100%; border-collapse:collapse; font-size:12.5px}
+  .matchlist th,.matchlist td{padding:6px 9px; border-bottom:1px solid var(--line); text-align:left}
+  .matchlist th{position:sticky; top:0; background:#f7f9fc; font-weight:600; font-size:11.5px; color:#5b6472}
+  .matchlist td.f{max-width:330px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .matchlist .miss{color:#b42318}
+  .modal .opt{display:flex; gap:7px; align-items:flex-start; margin:0 0 14px;
+              font-size:12.5px; color:#3a424e; line-height:1.45}
+
   /* Modal — confirm() 대체 */
   #modal-root{position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; background:rgba(16,24,40,.44)}
   #modal-root.open{display:flex}
@@ -428,11 +464,19 @@
         <button class="btn" id="sel-clear" data-testid="sel-clear">선택 해제</button>
       </div>
 
+      <div class="audiobar" id="audiobar">
+        <span>🎧 음원 폴더를 여기에 끌어다 놓으면 파일명에서 코드를 찾아 자동으로 붙입니다.</span>
+        <span class="sp"></span>
+        <button class="btn" id="btn-audio-folder" data-testid="audio-folder">📁 폴더 선택</button>
+      </div>
+      <input type="file" id="file-audio-folder" webkitdirectory directory multiple hidden>
+      <input type="file" id="file-audio-one" accept="audio/*" hidden>
+
       <div class="tablewrap">
         <table>
           <thead>
             <tr>
-              <th class="cb"><input type="checkbox" id="check-all" title="이 페이지 전체 선택"></th><th>코드</th><th>상태</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>발급일</th><th id="th-last">비고</th><th></th>
+              <th class="cb"><input type="checkbox" id="check-all" title="이 페이지 전체 선택"></th><th>코드</th><th>상태</th><th class="audcol">음원</th><th>음원 제목</th><th>작곡가</th><th>아티스트</th><th>발급일</th><th id="th-last">비고</th><th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -456,6 +500,14 @@
 
 <div id="toasts" aria-live="polite" role="status"></div>
 <div id="modal-root" role="dialog" aria-modal="true"></div>
+
+<div id="playerbar">
+  <span class="pcode" id="pb-code"></span>
+  <span class="ptitle" id="pb-title"></span>
+  <audio id="pb-audio" controls preload="none"></audio>
+  <button class="btn" id="pb-copy" data-testid="pb-copy">코드 복사</button>
+  <button class="btn" id="pb-close" data-testid="pb-close">닫기</button>
+</div>
 
 <script>
 (async function(){
@@ -569,7 +621,7 @@ function fail(error, title){
 // 서버에서 전체를 다시 읽어온다
 async function pullAll(){
   const { data, error } = await sb.from('mzcd_codes')
-    .select('code,title,composer,artist,note,created_at,created_by,deleted_at')
+    .select('code,title,composer,artist,note,created_at,created_by,deleted_at,audio_path,audio_name,audio_size')
     .order('created_at', { ascending: false });
   if (error) return fail(error, '불러오기 실패');
   const all = (data || []).map(row => ({
@@ -578,7 +630,10 @@ async function pullAll(){
     note: row.note || '',
     createdAt: (row.created_at || '').slice(0, 10),
     createdBy: row.created_by || '',
-    deletedAt: row.deleted_at || null
+    deletedAt: row.deleted_at || null,
+    audioPath: row.audio_path || null,
+    audioName: row.audio_name || '',
+    audioSize: row.audio_size || 0
   }));
   records = all.filter(r => !r.deletedAt);
   trash   = all.filter(r =>  r.deletedAt);
@@ -603,12 +658,22 @@ async function setDeleted(codes, when){
   return true;
 }
 
-// 완전 삭제
+// 완전 삭제 — 코드 행과 함께 붙어 있던 음원 파일도 지운다
 async function hardDelete(codes){
+  const set = new Set(codes);
+  const paths = [];
+  for (const r of records.concat(trash)){
+    if (set.has(r.code) && r.audioPath) paths.push(r.audioPath);
+  }
   for (const part of chunk(codes, 400)){
     const { error } = await sb.from('mzcd_codes').delete().in('code', part);
     if (error) return fail(error, '삭제 실패');
   }
+  // 파일 정리는 실패해도 삭제 자체는 되돌리지 않는다(고아 파일만 남음)
+  for (const part of chunk(paths, 100)){
+    try { await sb.storage.from(AUDIO_BUCKET).remove(part); } catch (err) { /* 무시 */ }
+  }
+  for (const p of paths) signedCache.delete(p);
   return true;
 }
 
@@ -695,7 +760,7 @@ function setStatusFilter(v){
 
 // 검색 대상 필드
 function haystack(r){
-  return [r.code, r.title, r.composer, r.artist, r.note]
+  return [r.code, r.title, r.composer, r.artist, r.note, r.audioName]
     .map(x => x || '').join(' ').toLowerCase();
 }
 
@@ -812,6 +877,7 @@ function renderTable(){
   $('trashbar').style.display  = inTrashView() ? 'flex' : 'none';
   $('trashfoot').style.display = inTrashView() ? 'flex' : 'none';
   $('th-last').textContent = inTrashView() ? '삭제일' : '비고';
+  $('audiobar').style.display = inTrashView() ? 'none' : 'flex';
 
   if (inTrashView()){
     if (!trash.length){
@@ -875,6 +941,7 @@ function renderTable(){
     pill.textContent = used ? '배정됨' : '미배정';
     tdSt.appendChild(pill);
     tr.appendChild(tdSt);
+    tr.appendChild(makeAudioCell(r));
 
     for (const f of FIELDS){
       const td = document.createElement('td');
@@ -937,6 +1004,11 @@ function renderTrashRows(slice){
     tdSt.appendChild(pill);
     tr.appendChild(tdSt);
 
+    const tdAu = document.createElement('td');
+    tdAu.className = 'ro dim';
+    tdAu.textContent = r.audioPath ? '🎵' : '—';
+    tr.appendChild(tdAu);
+
     for (const f of FIELDS){
       const td = document.createElement('td');
       td.className = 'ro';
@@ -969,6 +1041,420 @@ function fmtDeleted(iso){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
          String(d.getDate()).padStart(2,'0') + ' ' +
          String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+/* =========================================================
+   4-b) 음원 미리듣기 — 첨부 · 재생 · 폴더 일괄 붙이기
+   ========================================================= */
+const AUDIO_BUCKET  = 'mzcd-audio';
+const AUDIO_EXT     = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|aif|aiff|wma|mp4)$/i;
+const PREVIEW_RATE  = 32000;              // 미리듣기용 샘플레이트
+const PREVIEW_KBPS  = 64;                 // 미리듣기용 비트레이트(모노)
+const MAX_UPLOAD    = 25 * 1024 * 1024;   // 버킷 제한과 동일
+const SIGN_TTL      = 3600;               // 재생 링크 유효시간(초)
+
+const signedCache = new Map();            // path -> { url, exp }
+let Mp3Encoder = null;
+let playingCode = null;
+let pendingRec = null;
+
+const player    = $('pb-audio');
+const playerBar = $('playerbar');
+
+/* --- 인코더 (CDN에서 필요할 때만 불러옴) --- */
+async function loadEncoder(){
+  if (Mp3Encoder) return Mp3Encoder;
+  for (const url of ['https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/dist/lamejs.js',
+                     'https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/+esm',
+                     'https://esm.sh/@breezystack/lamejs@1.2.7']){
+    try {
+      const mod = await import(url);
+      Mp3Encoder = mod.Mp3Encoder || (mod.default && mod.default.Mp3Encoder) || null;
+      if (Mp3Encoder) return Mp3Encoder;
+    } catch (err) { /* 다음 후보 */ }
+  }
+  return null;
+}
+
+function extOf(name){
+  const m = /\.([a-z0-9]+)$/i.exec(name || '');
+  return m ? m[1].toLowerCase() : 'mp3';
+}
+
+function sizeText(n){
+  if (!n) return '';
+  return n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB';
+}
+
+/* --- 원본을 모노 64kbps mp3로 줄인다.
+       브라우저가 못 읽거나 줄여도 더 크면 원본을 그대로 올린다. --- */
+async function toPreview(file){
+  const fallback = { blob: file, ext: extOf(file.name), shrunk: false };
+  let decoded = null;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return fallback;
+    const ctx = new Ctx();
+    decoded = await ctx.decodeAudioData(await file.arrayBuffer());
+    ctx.close();
+  } catch (err) { return fallback; }
+  if (!decoded || !decoded.duration) return fallback;
+
+  const Enc = await loadEncoder();
+  if (!Enc) return fallback;
+
+  let mono;
+  try {
+    const frames = Math.max(1, Math.ceil(decoded.duration * PREVIEW_RATE));
+    const off = new OfflineAudioContext(1, frames, PREVIEW_RATE);
+    const src = off.createBufferSource();
+    src.buffer = decoded;
+    src.connect(off.destination);
+    src.start();
+    mono = (await off.startRendering()).getChannelData(0);
+  } catch (err) { return fallback; }
+
+  const pcm = new Int16Array(mono.length);
+  for (let i = 0; i < mono.length; i++){
+    const v = mono[i] < -1 ? -1 : (mono[i] > 1 ? 1 : mono[i]);
+    pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+  }
+
+  try {
+    const enc = new Enc(1, PREVIEW_RATE, PREVIEW_KBPS);
+    const parts = [];
+    const STEP = 1152;
+    let block = 0;
+    for (let i = 0; i < pcm.length; i += STEP){
+      const buf = enc.encodeBuffer(pcm.subarray(i, i + STEP));
+      if (buf.length) parts.push(new Uint8Array(buf));
+      if (++block % 400 === 0) await new Promise(r => setTimeout(r));   // 화면이 멎지 않게
+    }
+    const tail = enc.flush();
+    if (tail.length) parts.push(new Uint8Array(tail));
+    const blob = new Blob(parts, { type: 'audio/mpeg' });
+    if (!blob.size || blob.size >= file.size) return fallback;
+    return { blob, ext: 'mp3', shrunk: true };
+  } catch (err) { return fallback; }
+}
+
+/* --- 업로드 / 삭제 --- */
+async function uploadAudio(rec, file){
+  if (!rec || !file) return false;
+  const prepared = await toPreview(file);
+  if (prepared.blob.size > MAX_UPLOAD){
+    toast(file.name + ' 은(는) 25MB를 넘어 올릴 수 없습니다.', 'warn', '건너뜀', 5000);
+    return false;
+  }
+  const path = rec.code.replace('#', '') + '.' + prepared.ext;
+  const { error } = await sb.storage.from(AUDIO_BUCKET)
+    .upload(path, prepared.blob, { upsert: true, contentType: prepared.blob.type || 'audio/mpeg' });
+  if (error) return fail(error, '업로드 실패');
+
+  const patch = {
+    audio_path: path,
+    audio_name: file.name,
+    audio_size: prepared.blob.size,
+    audio_updated_at: new Date().toISOString()
+  };
+  const { error: e2 } = await sb.from('mzcd_codes').update(patch).eq('code', rec.code);
+  if (e2) return fail(e2, '저장 실패');
+
+  // 확장자가 달라지면 옛 파일이 그대로 남으므로 지운다
+  if (rec.audioPath && rec.audioPath !== path){
+    try { await sb.storage.from(AUDIO_BUCKET).remove([rec.audioPath]); } catch (err) { /* 무시 */ }
+    signedCache.delete(rec.audioPath);
+  }
+  rec.audioPath = path;
+  rec.audioName = file.name;
+  rec.audioSize = prepared.blob.size;
+  signedCache.delete(path);
+  return true;
+}
+
+async function removeAudio(rec){
+  const ok = await confirmModal({
+    title: '음원 삭제',
+    message: rec.code + ' 에 붙은 음원 파일을 지웁니다.\n코드와 정보는 그대로 남습니다.',
+    okText: '삭제', danger: true
+  });
+  if (!ok) return;
+  if (playingCode === rec.code) stopPlay();
+  const path = rec.audioPath;
+  if (path) await sb.storage.from(AUDIO_BUCKET).remove([path]);
+  const { error } = await sb.from('mzcd_codes')
+    .update({ audio_path: null, audio_name: null, audio_size: null, audio_updated_at: null })
+    .eq('code', rec.code);
+  if (error){ fail(error, '저장 실패'); return; }
+  rec.audioPath = null; rec.audioName = ''; rec.audioSize = 0;
+  if (path) signedCache.delete(path);
+  renderTable();
+  toast('음원을 삭제했습니다.', 'success', rec.code, 2600);
+}
+
+/* --- 재생 --- */
+async function signedUrl(path){
+  const hit = signedCache.get(path);
+  if (hit && hit.exp > Date.now()) return hit.url;
+  const { data, error } = await sb.storage.from(AUDIO_BUCKET).createSignedUrl(path, SIGN_TTL);
+  if (error || !data || !data.signedUrl){
+    fail(error || new Error('재생 링크를 만들지 못했습니다.'), '재생 실패');
+    return null;
+  }
+  signedCache.set(path, { url: data.signedUrl, exp: Date.now() + (SIGN_TTL - 120) * 1000 });
+  return data.signedUrl;
+}
+
+async function togglePlay(rec){
+  if (!rec || !rec.audioPath) return;
+  if (playingCode === rec.code && player.src){
+    if (player.paused) { try { await player.play(); } catch (err) {} }
+    else player.pause();
+    renderAudioButtons();
+    return;
+  }
+  const url = await signedUrl(rec.audioPath);
+  if (!url) return;
+  playingCode = rec.code;
+  player.src = url;
+  $('pb-code').textContent = rec.code;
+  $('pb-title').textContent = rec.title || rec.audioName || '';
+  playerBar.classList.add('on');
+  try { await player.play(); }
+  catch (err){ toast('이 파일은 브라우저가 재생하지 못합니다.', 'warn', '재생 실패'); }
+  renderAudioButtons();
+}
+
+function stopPlay(){
+  try { player.pause(); } catch (err) {}
+  player.removeAttribute('src');
+  try { player.load(); } catch (err) {}
+  playingCode = null;
+  playerBar.classList.remove('on');
+  renderAudioButtons();
+}
+
+function renderAudioButtons(){
+  for (const b of document.querySelectorAll('.aud button.play')){
+    const on = b.dataset.code === playingCode && !player.paused;
+    b.classList.toggle('on', on);
+    b.textContent = on ? '❚❚' : '▶';
+  }
+}
+
+/* --- 표 안의 음원 칸 --- */
+function makeAudioCell(r){
+  const td = document.createElement('td');
+  const box = document.createElement('div');
+  box.className = 'aud';
+  if (r.audioPath){
+    const play = document.createElement('button');
+    play.className = 'play';
+    play.dataset.code = r.code;
+    play.dataset.testid = 'play';
+    play.title = (r.audioName || '음원') + (r.audioSize ? ' · ' + sizeText(r.audioSize) : '');
+    const on = playingCode === r.code && !player.paused;
+    play.textContent = on ? '❚❚' : '▶';
+    if (on) play.classList.add('on');
+    play.onclick = () => togglePlay(r);
+
+    const swap = document.createElement('button');
+    swap.title = '다른 파일로 교체';
+    swap.textContent = '⇄';
+    swap.onclick = () => pickOne(r);
+
+    const del = document.createElement('button');
+    del.title = '음원 삭제';
+    del.textContent = '✕';
+    del.onclick = () => removeAudio(r);
+
+    box.append(play, swap, del);
+  } else {
+    const add = document.createElement('button');
+    add.className = 'add';
+    add.dataset.testid = 'attach';
+    add.title = '음원 파일 첨부';
+    add.textContent = '＋';
+    add.onclick = () => pickOne(r);
+    box.appendChild(add);
+  }
+  td.appendChild(box);
+  return td;
+}
+
+function pickOne(rec){
+  pendingRec = rec;
+  const el = $('file-audio-one');
+  el.value = '';
+  el.click();
+}
+
+/* --- 폴더 일괄 붙이기 --- */
+function stemOf(name){ return String(name || '').replace(/\.[^.]+$/, ''); }
+function normKey(v){ return String(v || '').toLowerCase().replace(/[\s_\-–—.·()[\]]+/g, ''); }
+
+// 파일 목록을 코드에 맞춘다: ① 파일명 속 코드 ② 음원 제목 ③ (선택) 미배정 코드 순서
+function matchFiles(files){
+  const byCode = new Map(records.map(r => [r.code, r]));
+  const byTitle = new Map();
+  for (const r of records){
+    const k = normKey(r.title);
+    if (k && !byTitle.has(k)) byTitle.set(k, r);
+  }
+  const taken = new Set();
+  const rows = [];
+
+  for (const f of files){
+    let rec = null, how = '';
+    const m = /MZCD[\s_-]*(\d{7})/i.exec(f.name);
+    if (m && byCode.has(PREFIX + m[1])){ rec = byCode.get(PREFIX + m[1]); how = '파일명 속 코드'; }
+    if (!rec){
+      const t = byTitle.get(normKey(stemOf(f.name)));
+      if (t){ rec = t; how = '음원 제목'; }
+    }
+    if (rec && taken.has(rec.code)){ rec = null; how = ''; }
+    if (rec) taken.add(rec.code);
+    rows.push({ file: f, rec, how, fallback: null });
+  }
+
+  const free = records.filter(r => !isUsed(r) && !r.audioPath && !taken.has(r.code));
+  let i = 0;
+  for (const row of rows){
+    if (row.rec) continue;
+    if (i < free.length){ row.fallback = free[i]; taken.add(free[i].code); i++; }
+  }
+  return rows;
+}
+
+function matchModal(rows){
+  return new Promise(resolve => {
+    const matched  = rows.filter(r => r.rec).length;
+    const spare    = rows.filter(r => !r.rec && r.fallback).length;
+    const orphan   = rows.filter(r => !r.rec && !r.fallback).length;
+
+    modalRoot.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'modal wide';
+    box.innerHTML =
+      '<h3>음원 폴더 붙이기</h3><p></p>' +
+      '<div class="matchlist"><table><thead><tr>' +
+      '<th>파일</th><th>붙일 코드</th><th>찾은 기준</th>' +
+      '</tr></thead><tbody></tbody></table></div>' +
+      '<label class="opt"><input type="checkbox" data-testid="use-spare">' +
+      '<span>매칭되지 않은 파일을 <b>미배정 코드</b>에 순서대로 붙이고, 파일명을 음원 제목으로 넣기</span></label>' +
+      '<div class="acts">' +
+      '<button class="btn" data-testid="modal-cancel">취소</button>' +
+      '<button class="btn primary" data-testid="modal-ok">업로드</button></div>';
+
+    box.querySelector('p').textContent =
+      '오디오 파일 ' + rows.length + '개 · 코드를 찾은 파일 ' + matched + '개' +
+      (spare  ? ' · 미배정 코드로 붙일 수 있는 파일 ' + spare + '개' : '') +
+      (orphan ? ' · 붙일 코드가 없는 파일 ' + orphan + '개' : '');
+
+    const tb = box.querySelector('tbody');
+    const cb = box.querySelector('[data-testid=use-spare]');
+
+    const draw = () => {
+      const frag = document.createDocumentFragment();
+      for (const row of rows){
+        const target = row.rec || (cb.checked ? row.fallback : null);
+        const tr = document.createElement('tr');
+        const td1 = document.createElement('td');
+        td1.className = 'f'; td1.textContent = row.file.name; td1.title = row.file.name;
+        const td2 = document.createElement('td');
+        if (target){
+          const c = document.createElement('code');
+          c.textContent = target.code;
+          td2.appendChild(c);
+        } else {
+          const sp = document.createElement('span');
+          sp.className = 'miss'; sp.textContent = '건너뜀';
+          td2.appendChild(sp);
+        }
+        const td3 = document.createElement('td');
+        td3.textContent = row.rec ? row.how : (target ? '미배정 순서' : '—');
+        tr.append(td1, td2, td3);
+        frag.appendChild(tr);
+      }
+      tb.replaceChildren(frag);
+    };
+    cb.onchange = draw;
+    draw();
+
+    const done = v => { closeModal(); resolve(v); };
+    box.querySelector('[data-testid=modal-cancel]').onclick = () => done(null);
+    box.querySelector('[data-testid=modal-ok]').onclick = () => done({ useSpare: cb.checked });
+    modalRoot.appendChild(box);
+    modalRoot.classList.add('open');
+  });
+}
+
+async function attachFolder(fileList){
+  const files = Array.from(fileList || []).filter(f => AUDIO_EXT.test(f.name));
+  if (!files.length){
+    toast('폴더에서 오디오 파일을 찾지 못했습니다.', 'warn', '붙일 파일 없음');
+    return;
+  }
+  files.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  const rows = matchFiles(files);
+  const answer = await matchModal(rows);
+  if (!answer){ toast('취소했습니다.', 'info', '', 2000); return; }
+
+  const jobs = [];
+  for (const row of rows){
+    const target = row.rec || (answer.useSpare ? row.fallback : null);
+    if (target) jobs.push({ file: row.file, rec: target, fillTitle: !row.rec });
+  }
+  if (!jobs.length){ toast('붙일 파일이 없습니다.', 'warn', '', 3000); return; }
+
+  let ok = 0, ng = 0;
+  const t = toast('준비 중…', 'info', '음원 붙이는 중', 900000);
+  const line = t.querySelector('.m');
+  for (const job of jobs){
+    line.textContent = (ok + ng + 1) + ' / ' + jobs.length + ' · ' + job.file.name;
+    const done = await uploadAudio(job.rec, job.file);
+    if (done){
+      ok++;
+      if (job.fillTitle && !job.rec.title){
+        const title = stemOf(job.file.name);
+        const { error } = await sb.from('mzcd_codes').update({ title }).eq('code', job.rec.code);
+        if (!error) job.rec.title = title;
+      }
+    } else ng++;
+  }
+  t.remove();
+  render();
+  toast('붙임 ' + ok + '건' + (ng ? ' · 실패 ' + ng + '건' : ''),
+        ng ? 'warn' : 'success', '폴더 붙이기 완료', 6000);
+}
+
+// 끌어다 놓은 항목에서 파일을 모은다 (하위 폴더까지)
+function walkEntry(entry, out){
+  return new Promise(resolve => {
+    if (!entry){ resolve(); return; }
+    if (entry.isFile){ entry.file(f => { out.push(f); resolve(); }, () => resolve()); return; }
+    if (!entry.isDirectory){ resolve(); return; }
+    const reader = entry.createReader();
+    const step = () => reader.readEntries(async list => {
+      if (!list.length){ resolve(); return; }
+      for (const e of list) await walkEntry(e, out);
+      step();
+    }, () => resolve());
+    step();
+  });
+}
+
+async function filesFromDrop(dt){
+  const out = [];
+  const items = dt && dt.items ? Array.from(dt.items) : [];
+  const entries = items
+    .map(i => (i.webkitGetAsEntry ? i.webkitGetAsEntry() : null))
+    .filter(Boolean);
+  if (entries.length){
+    for (const e of entries) await walkEntry(e, out);
+    return out;
+  }
+  return Array.from((dt && dt.files) || []);
 }
 
 function render(){ renderStats(); renderTable(); }
@@ -1241,6 +1727,51 @@ $('file-import').onchange = e => {
   if (f) importJSON(f);
   e.target.value = '';
 };
+/* 음원 — 한 곡 첨부 / 폴더 일괄 / 재생바 */
+$('file-audio-one').onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  const rec = pendingRec;
+  pendingRec = null;
+  e.target.value = '';
+  if (!f || !rec) return;
+  const t = toast('“' + f.name + '” 변환·업로드 중…', 'info', rec.code, 900000);
+  const ok = await uploadAudio(rec, f);
+  t.remove();
+  if (ok){ renderTable(); toast('음원을 붙였습니다.', 'success', rec.code, 2600); }
+};
+
+$('btn-audio-folder').onclick = () => { $('file-audio-folder').value = ''; $('file-audio-folder').click(); };
+$('file-audio-folder').onchange = e => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (files.length) attachFolder(files);
+};
+
+(function wireDrop(){
+  const zone = $('audiobar');
+  const stop = e => { e.preventDefault(); e.stopPropagation(); };
+  zone.addEventListener('dragenter', e => { stop(e); zone.classList.add('drop'); });
+  zone.addEventListener('dragover',  e => { stop(e); zone.classList.add('drop'); });
+  zone.addEventListener('dragleave', e => {
+    stop(e);
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('drop');
+  });
+  zone.addEventListener('drop', async e => {
+    stop(e);
+    zone.classList.remove('drop');
+    attachFolder(await filesFromDrop(e.dataTransfer));
+  });
+  // 창 밖으로 벗어난 드롭이 페이지를 덮어쓰지 않게
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop',     e => e.preventDefault());
+})();
+
+player.addEventListener('play',  renderAudioButtons);
+player.addEventListener('pause', renderAudioButtons);
+player.addEventListener('ended', renderAudioButtons);
+$('pb-copy').onclick  = () => { if (playingCode) copyCode(playingCode); };
+$('pb-close').onclick = stopPlay;
+
 $('check-all').onchange = e => {
   const codes = currentPageCodes();
   if (e.target.checked) codes.forEach(c => selected.add(c));
@@ -1300,6 +1831,8 @@ window.__mzcd = {
   trashSelected, restoreSelected, purgeSelected, clearSelection,
   isValidCode, checkDigit, randomCode, refresh,
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render,
+  matchFiles, attachFolder, uploadAudio, removeAudio, togglePlay, stopPlay, toPreview,
+  get playingCode(){ return playingCode; },
   get sb(){ return sb; }
 };
 
@@ -1339,6 +1872,8 @@ $('loginform').addEventListener('submit', async e => {
 });
 
 $('btn-logout').onclick = async () => {
+  stopPlay();
+  signedCache.clear();
   await sb.auth.signOut();
   records = []; trash = []; me = null;
   render();
