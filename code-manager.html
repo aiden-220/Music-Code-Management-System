@@ -310,6 +310,35 @@
   .rolebadge{font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; white-space:nowrap;
              background:#eef2f7; color:#4a5260; border:1px solid var(--line)}
   body.role-admin .rolebadge{background:#e8f0fe; color:#1b64da; border-color:#b9c6d8}
+  /* ============ 트리톤(ISRC) 전용 탭 — MZCD와 구분되는 주황 계열 ============ */
+  .navbtn.tri{color:#9a3412}
+  .navbtn.tri:hover{background:#fff4e8}
+  .navbtn.tri.on{background:#ffedd5; color:#c2410c}
+  .navbtn.tri.on .cnt{background:#fff; color:#c2410c}
+  #screen-triton{border-color:#fdba74; border-width:2px}
+  .tri-banner{
+    display:flex; align-items:flex-start; gap:12px; margin:0 0 15px; padding:14px 16px;
+    background:#fff7ed; border:2px solid #fb923c; border-radius:var(--r-md); color:#7c2d12;
+  }
+  .tri-banner .big{font-size:26px; line-height:1}
+  .tri-banner b{display:block; font-size:16px; color:#c2410c; letter-spacing:-.01em}
+  .tri-banner span{font-size:12.5px}
+  .tri-form{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:9px; margin-bottom:10px}
+  .tri-form label{display:flex; flex-direction:column; gap:3px; font-size:11.5px; font-weight:600; color:#5a6478}
+  .tri-form input{padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink)}
+  .tri-form input:focus{outline:2px solid #fdba74; outline-offset:-1px; border-color:#fdba74}
+  .tri-form input.bad{border-color:var(--err); background:var(--err-bg)}
+  .tri-acts{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px}
+  .btn.tri{background:#ea580c; border-color:#ea580c; color:#fff}
+  .btn.tri:hover{background:#c2410c}
+  .tri-paste{width:100%; min-height:110px; padding:9px 11px; border:1px dashed #fb923c; border-radius:var(--r-sm);
+             background:#fffaf5; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; resize:vertical}
+  .tri-sub{font-size:13px; font-weight:700; margin:16px 0 8px; color:#7c2d12}
+  .isrc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; white-space:nowrap; color:#9a3412}
+  .tri-tools{display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin-bottom:9px}
+  .tri-tools input[type=search]{flex:1; min-width:220px; padding:9px 12px; border:1px solid var(--line); border-radius:var(--r-sm)}
+  .tri-tools label{font-size:12.5px; color:#5a6478; display:flex; gap:5px; align-items:center}
+  .matchlist .ok{color:var(--ok)}
 </style>
 </head>
 <body class="role-member">
@@ -357,6 +386,8 @@
       <button class="navbtn on" data-act="view-all"><span class="ic">🗂️</span>전체 코드<span class="cnt" id="nav-all">0</span></button>
       <button class="navbtn" data-act="view-free"><span class="ic">🆕</span>미배정 코드<span class="cnt" id="nav-free">0</span></button>
       <button class="navbtn" data-act="view-used"><span class="ic">✅</span>배정된 코드<span class="cnt" id="nav-used">0</span></button>
+      <div class="grp">트리톤 (ISRC)</div>
+      <button class="navbtn tri" data-act="go-triton"><span class="ic">🎵</span>트리톤 곡<span class="cnt" id="nav-triton">0</span></button>
 
       <div class="grp admin-only">코드 발급</div>
       <button class="navbtn admin-only" data-act="go-issue"><span class="ic">📌</span>코드 발급</button>
@@ -501,6 +532,58 @@
         <button class="btn danger" id="btn-empty-trash" data-testid="empty-trash">🗑️ 전체 삭제</button>
       </div>
     </section>
+
+    <!-- 트리톤(ISRC) 전용 곡 — MZCD 코드와 완전히 분리된 별도 목록 (Supabase triton_tracks) -->
+    <section class="card screen" id="screen-triton" hidden>
+      <div class="tri-banner">
+        <span class="big">🎵</span>
+        <div>
+          <b>트리톤 전용 곡 · 설명란에 코드를 넣지 마세요</b>
+          <span>이 곡들은 MZCD 코드가 없습니다. 트리톤아시아 채널이 쇼츠 사운드(라이브러리)로 사용하면 쇼츠에 표시되는 “곡명 · 아티스트”로 자동 확인됩니다. 곡명·아티스트는 유튜브에 등록된 표기와 똑같이 입력하세요.</span>
+        </div>
+      </div>
+
+      <div class="admin-only">
+        <h3 class="tri-sub">한 곡 등록</h3>
+        <div class="tri-form" id="tri-form">
+          <label>곡명 *<input id="tri-title" autocomplete="off"></label>
+          <label>아티스트 *<input id="tri-artist" autocomplete="off"></label>
+          <label>앨범<input id="tri-album" autocomplete="off"></label>
+          <label>ISRC * (12자리)<input id="tri-isrc" autocomplete="off" placeholder="QT66U2651541" maxlength="20"></label>
+          <label>할당처<input id="tri-assignee" autocomplete="off" placeholder="트리톤아시아"></label>
+          <label>사용 범위<input id="tri-scope" autocomplete="off" placeholder="일본 채널 전용"></label>
+          <label>비고<input id="tri-note" autocomplete="off"></label>
+          <label>등록일<input id="tri-date" type="date"></label>
+        </div>
+        <div class="tri-acts">
+          <button class="btn tri" id="tri-save" data-testid="tri-save">저장</button>
+          <button class="btn" id="tri-reset">입력 지우기</button>
+        </div>
+
+        <h3 class="tri-sub">엑셀에서 여러 줄 붙여넣기</h3>
+        <p class="hint" style="margin:0 0 7px">열 순서: <code>곡명</code> <code>아티스트</code> <code>앨범</code> <code>ISRC</code> <code>할당처</code> <code>사용 범위</code> <code>비고</code> <code>등록일</code> — 엑셀에서 셀을 복사해 그대로 붙여넣으세요. 머리글 줄은 자동으로 건너뜁니다.</p>
+        <textarea class="tri-paste" id="tri-paste" data-testid="tri-paste" placeholder="예) Last Stand ⇥ GABRIEL ⇥ Iron Chronicle ⇥ QT66U2651305 ⇥ 미정(확인 필요) ⇥ ⇥ ⇥ 2026-10-08"></textarea>
+        <div class="tri-acts" style="margin-top:8px">
+          <button class="btn tri" id="tri-bulk" data-testid="tri-bulk">붙여넣은 내용 확인 후 등록</button>
+        </div>
+      </div>
+
+      <h3 class="tri-sub">트리톤 곡 목록</h3>
+      <div class="tri-tools">
+        <input type="search" id="tri-search" placeholder="곡명 · 아티스트 · 앨범 · ISRC · 할당처 검색" autocomplete="off">
+        <label class="admin-only"><input type="checkbox" id="tri-show-deleted"> 삭제된 곡 보기</label>
+        <span class="hint" id="tri-count" style="margin:0"></span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>곡명</th><th>아티스트</th><th>앨범</th><th>ISRC</th><th>할당처</th><th>사용 범위</th><th>비고</th><th>등록일</th><th class="admin-only"></th></tr>
+          </thead>
+          <tbody id="tri-tbody"></tbody>
+        </table>
+        <div class="empty" id="tri-empty">등록된 트리톤 곡이 없습니다.</div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -637,7 +720,7 @@ function applyRole(){
   $('role-badge').textContent = isAdmin() ? '관리자' : '회원';
   if (!isAdmin()){
     // 회원이 관리 화면에 머물러 있지 않게
-    if (screen !== 'list') showScreen('list');
+    if (screen === 'issue') showScreen('list');
     if (statusFilter === 'trash') setStatusFilter('all');
     clearSelection();
   }
@@ -1779,10 +1862,14 @@ function showScreen(name){
   screen = name;
   $('screen-list').hidden  = name !== 'list';
   $('screen-issue').hidden = name !== 'issue';
+  $('screen-triton').hidden = name !== 'triton';
+  document.querySelector('.statpanel').hidden = name === 'triton';   // MZCD 현황은 트리톤 화면에서 숨김
   for (const b of document.querySelectorAll('#sidenav .navbtn')){
     if (b.dataset.act === 'go-issue') b.classList.toggle('on', name === 'issue');
+    if (b.dataset.act === 'go-triton') b.classList.toggle('on', name === 'triton');
   }
-  if (name === 'issue'){
+  if (name === 'triton') loadTriton();
+  if (name !== 'list'){
     // 보기 메뉴 강조만 해제. 선택했던 탭은 그대로 두었다가 돌아올 때 복원
     for (const b of document.querySelectorAll('#sidenav .navbtn')){
       if (b.dataset.act.startsWith('view-')) b.classList.remove('on');
@@ -1894,7 +1981,8 @@ const NAV_ACTIONS = {
   'dupcheck':  duplicateCheck,
   'export':    exportJSON,
   'import':    () => { if (adminOnly()) $('file-import').click(); },
-  'view-trash':() => showView('trash')
+  'view-trash':() => showView('trash'),
+  'go-triton': () => showScreen('triton')
 };
 $('sidenav').onclick = e => {
   const btn = e.target.closest('.navbtn');
@@ -1905,6 +1993,261 @@ $('sidenav').onclick = e => {
 
 $('prev').onclick = () => { if (page > 1){ page--; clearSelection(); renderTable(); } };
 $('next').onclick = () => { page++; clearSelection(); renderTable(); };
+
+/* =========================================================
+   7) 트리톤(ISRC) 전용 곡 — MZCD 코드와 분리된 별도 표(triton_tracks)
+      코드 발급 없음. 곡명+아티스트가 쇼츠 사운드 표시와 일치하는지로 자동 확인된다.
+   ========================================================= */
+const TRI_FIELDS = ['title','artist','album','isrc','assignee','scope','note','registered_at'];
+const TRI_LABEL  = { title:'곡명', artist:'아티스트', album:'앨범', isrc:'ISRC', assignee:'할당처', scope:'사용 범위', note:'비고', registered_at:'등록일' };
+let triRows = [];          // 서버에서 읽은 전체(삭제 포함)
+let triLoaded = false;
+
+// ISRC: 공백·하이픈 제거 후 대문자 12자리 영숫자
+function normIsrc(v){ return String(v || '').replace(/[\s\-]/g, '').toUpperCase(); }
+function isValidIsrc(v){ return /^[A-Z0-9]{12}$/.test(v); }
+
+// 날짜: 2026-10-08 / 2026/10/08 / 2026.10.08 → 2026-10-08 (비어 있으면 오늘)
+function normDate(v){
+  const t = String(v || '').trim();
+  if (!t) return todayStr();
+  const m = /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/.exec(t);
+  if (!m) return null;
+  const d = m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+  return Number.isFinite(Date.parse(d)) ? d : null;
+}
+
+async function loadTriton(){
+  if (!sb || !me) return false;
+  const { data, error } = await sb.from('triton_tracks')
+    .select('id,title,artist,album,isrc,assignee,scope,note,registered_at,deleted_at,created_at')
+    .order('registered_at', { ascending: false })
+    .order('id', { ascending: true });
+  if (error){
+    $('tri-empty').textContent = '트리톤 곡 목록을 불러오지 못했습니다: ' + (error.message || error);
+    $('tri-empty').style.display = 'block';
+    return false;
+  }
+  triRows = data || [];
+  triLoaded = true;
+  renderTriton();
+  return true;
+}
+
+function triFiltered(){
+  const q = $('tri-search').value.trim().toLowerCase();
+  const showDel = isAdmin() && $('tri-show-deleted').checked;
+  return triRows.filter(r => {
+    if (!showDel && r.deleted_at) return false;
+    if (!q) return true;
+    return [r.title, r.artist, r.album, r.isrc, r.assignee, r.scope, r.note]
+      .map(x => x || '').join(' ').toLowerCase().includes(q);
+  });
+}
+
+function renderTriton(){
+  const alive = triRows.filter(r => !r.deleted_at).length;
+  $('nav-triton').textContent = alive.toLocaleString();
+  const list = triFiltered();
+  const admin = isAdmin();
+  $('tri-count').textContent = '등록 ' + alive.toLocaleString() + '곡' + (list.length !== alive ? ' · 표시 ' + list.length.toLocaleString() + '건' : '');
+  $('tri-empty').textContent = triRows.length ? '조건에 맞는 곡이 없습니다.' : '등록된 트리톤 곡이 없습니다.';
+  $('tri-empty').style.display = list.length ? 'none' : 'block';
+
+  const frag = document.createDocumentFragment();
+  for (const r of list){
+    const tr = document.createElement('tr');
+    if (r.deleted_at) tr.style.opacity = '.5';
+    for (const f of TRI_FIELDS){
+      const td = document.createElement('td');
+      const v = r[f] || '';
+      // ISRC는 고유 키라 표에서 고치지 않는다. 회원·삭제된 곡은 읽기 전용.
+      if (!admin || f === 'isrc' || r.deleted_at){
+        td.className = (f === 'isrc' ? 'isrc' : 'ro') + (v ? '' : ' dim');
+        td.textContent = v || '—';
+        if (v) td.title = v;
+        tr.appendChild(td);
+        continue;
+      }
+      const inp = document.createElement('input');
+      inp.value = v;
+      if (f === 'registered_at') inp.type = 'date';
+      inp.style.minWidth = f === 'title' ? '140px' : (f === 'registered_at' ? '120px' : '96px');
+      inp.addEventListener('change', async () => {
+        let val = inp.value.trim();
+        if ((f === 'title' || f === 'artist') && !val){ inp.value = v; toast(TRI_LABEL[f] + '은(는) 비울 수 없습니다.', 'warn', '입력 확인'); return; }
+        if (f === 'registered_at'){ val = normDate(val); if (!val){ inp.value = v; toast('날짜 형식이 올바르지 않습니다.', 'warn', '입력 확인'); return; } }
+        const { error } = await sb.from('triton_tracks').update({ [f]: val || null }).eq('id', r.id);
+        if (error){ inp.value = v; fail(error, '저장 실패'); return; }
+        r[f] = val || null;
+        toast(r.title + ' · ' + TRI_LABEL[f] + ' 저장', 'success', '저장 완료', 1600);
+      });
+      td.appendChild(inp);
+      tr.appendChild(td);
+    }
+    if (admin){
+      const td = document.createElement('td');
+      td.className = 'nowrap';
+      const b = document.createElement('button');
+      if (r.deleted_at){
+        b.className = 'restore'; b.textContent = '복원';
+        b.onclick = () => triSetDeleted(r, null);
+      } else {
+        b.className = 'del'; b.textContent = '삭제';
+        b.onclick = () => triSetDeleted(r, new Date().toISOString());
+      }
+      td.appendChild(b);
+      tr.appendChild(td);
+    }
+    frag.appendChild(tr);
+  }
+  $('tri-tbody').replaceChildren(frag);
+}
+
+// 삭제는 soft-delete(deleted_at)만. 복원 가능.
+async function triSetDeleted(r, when){
+  if (!adminOnly()) return;
+  if (when){
+    const ok = await confirmModal({
+      title: '트리톤 곡 삭제',
+      message: r.title + ' · ' + r.artist + ' (' + r.isrc + ')\n목록과 자동 확인 대상에서 빠집니다. "삭제된 곡 보기"에서 되돌릴 수 있습니다.',
+      okText: '삭제', danger: true
+    });
+    if (!ok) return;
+  }
+  const { error } = await sb.from('triton_tracks').update({ deleted_at: when }).eq('id', r.id);
+  if (error) return fail(error, when ? '삭제 실패' : '복원 실패');
+  await loadTriton();
+  toast(r.title + (when ? ' 을(를) 삭제했습니다.' : ' 을(를) 되돌렸습니다.'), 'success', when ? '삭제 완료' : '복원 완료');
+}
+
+// 입력 1건 검사 → { row } 또는 { error }
+function triCheck(raw, seen){
+  const row = {
+    title: String(raw.title || '').trim(),
+    artist: String(raw.artist || '').trim(),
+    album: String(raw.album || '').trim() || null,
+    isrc: normIsrc(raw.isrc),
+    assignee: String(raw.assignee || '').trim() || null,
+    scope: String(raw.scope || '').trim() || null,
+    note: String(raw.note || '').trim() || null,
+    registered_at: normDate(raw.registered_at)
+  };
+  if (!row.title) return { row, error: '곡명 없음' };
+  if (!row.artist) return { row, error: '아티스트 없음' };
+  if (!isValidIsrc(row.isrc)) return { row, error: 'ISRC 형식 오류(12자리 영숫자)' };
+  if (!row.registered_at) return { row, error: '등록일 형식 오류' };
+  const dup = triRows.find(x => x.isrc === row.isrc);
+  if (dup) return { row, error: dup.deleted_at ? '이미 있음(삭제된 곡 — 복원하세요)' : '이미 등록된 ISRC' };
+  if (seen && seen.has(row.isrc)) return { row, error: '붙여넣은 목록 안에서 중복' };
+  if (seen) seen.add(row.isrc);
+  return { row };
+}
+
+async function triSaveOne(){
+  if (!adminOnly()) return;
+  if (!triLoaded && !(await loadTriton())) return;
+  const raw = {};
+  for (const f of TRI_FIELDS) raw[f] = $(f === 'registered_at' ? 'tri-date' : 'tri-' + f).value;
+  const { row, error } = triCheck(raw);
+  $('tri-isrc').classList.toggle('bad', !!error && /ISRC/.test(error));
+  if (error){ toast(error, 'warn', '저장할 수 없습니다'); return; }
+  const { error: e2 } = await sb.from('triton_tracks').insert(row);
+  if (e2){
+    if (e2.code === '23505'){ toast('이미 등록된 ISRC입니다: ' + row.isrc, 'warn', '중복'); await loadTriton(); return; }
+    return fail(e2, '저장 실패');
+  }
+  for (const f of ['title','isrc','note']) $('tri-' + f).value = '';
+  await loadTriton();
+  toast(row.title + ' · ' + row.artist + ' (' + row.isrc + ')', 'success', '트리톤 곡 등록 완료');
+  $('tri-title').focus();
+}
+
+// 엑셀 붙여넣기: 탭으로 나뉜 줄 → 미리보기 → 정상 행만 등록
+function triParsePaste(text){
+  const out = [];
+  for (const line of String(text || '').split(/\r?\n/)){
+    if (!line.trim()) continue;
+    const c = line.split('\t');
+    if (/isrc/i.test(c[3] || '') || /^(곡명|title)$/i.test((c[0] || '').trim())) continue;   // 머리글 줄
+    out.push({ title: c[0], artist: c[1], album: c[2], isrc: c[3], assignee: c[4], scope: c[5], note: c[6], registered_at: c[7] });
+  }
+  return out;
+}
+
+function triPreviewModal(checked){
+  return new Promise(resolve => {
+    const good = checked.filter(x => !x.error).length;
+    modalRoot.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'modal wide';
+    box.innerHTML =
+      '<h3>트리톤 곡 일괄 등록</h3><p></p>' +
+      '<div class="matchlist"><table><thead><tr>' +
+      '<th>곡명</th><th>아티스트</th><th>앨범</th><th>ISRC</th><th>할당처</th><th>사용 범위</th><th>등록일</th><th>결과</th>' +
+      '</tr></thead><tbody></tbody></table></div>' +
+      '<div class="acts"><button class="btn" data-testid="modal-cancel">취소</button>' +
+      '<button class="btn tri" data-testid="modal-ok"></button></div>';
+    box.querySelector('p').textContent = '전체 ' + checked.length + '줄 · 등록 가능 ' + good + '건' +
+      (checked.length - good ? ' · 건너뜀 ' + (checked.length - good) + '건' : '');
+    const ok = box.querySelector('[data-testid=modal-ok]');
+    ok.textContent = good + '건 등록';
+    ok.disabled = !good;
+    const frag = document.createDocumentFragment();
+    for (const x of checked){
+      const tr = document.createElement('tr');
+      for (const v of [x.row.title, x.row.artist, x.row.album, x.row.isrc, x.row.assignee, x.row.scope, x.row.registered_at]){
+        const td = document.createElement('td'); td.className = 'f'; td.textContent = v || '—'; tr.appendChild(td);
+      }
+      const td = document.createElement('td');
+      td.className = x.error ? 'miss' : 'ok';
+      td.textContent = x.error || '등록';
+      tr.appendChild(td);
+      frag.appendChild(tr);
+    }
+    box.querySelector('tbody').appendChild(frag);
+    const done = v => { closeModal(); resolve(v); };
+    box.querySelector('[data-testid=modal-cancel]').onclick = () => done(false);
+    ok.onclick = () => done(true);
+    modalRoot.appendChild(box);
+    modalRoot.classList.add('open');
+  });
+}
+
+async function triBulk(){
+  if (!adminOnly()) return;
+  if (!triLoaded && !(await loadTriton())) return;
+  const raws = triParsePaste($('tri-paste').value);
+  if (!raws.length){ toast('붙여넣은 내용이 없습니다. 엑셀에서 셀을 복사해 붙여넣으세요.', 'warn', '입력 확인'); return; }
+  const seen = new Set();
+  const checked = raws.map(r => triCheck(r, seen));
+  if (!(await triPreviewModal(checked))) { toast('취소했습니다.', 'info', '', 2000); return; }
+  const rows = checked.filter(x => !x.error).map(x => x.row);
+  let added = 0;
+  for (const part of chunk(rows, 200)){
+    const { error } = await sb.from('triton_tracks').insert(part);
+    if (error){ fail(error, '일괄 등록 실패'); break; }
+    added += part.length;
+  }
+  if (added === rows.length) $('tri-paste').value = '';
+  await loadTriton();
+  toast('등록 ' + added + '건' + (checked.length - rows.length ? ' · 건너뜀 ' + (checked.length - rows.length) + '건' : ''), added ? 'success' : 'warn', '트리톤 일괄 등록');
+}
+
+function triResetForm(){
+  for (const f of TRI_FIELDS) $(f === 'registered_at' ? 'tri-date' : 'tri-' + f).value = '';
+  $('tri-date').value = todayStr();
+  $('tri-isrc').classList.remove('bad');
+}
+
+$('tri-save').onclick = triSaveOne;
+$('tri-reset').onclick = triResetForm;
+$('tri-bulk').onclick = triBulk;
+$('tri-search').oninput = renderTriton;
+$('tri-show-deleted').onchange = renderTriton;
+$('tri-isrc').addEventListener('input', () => $('tri-isrc').classList.remove('bad'));
+$('tri-form').addEventListener('keydown', e => { if (e.key === 'Enter') triSaveOne(); });
+$('tri-date').value = todayStr();
 
 /* 자동화 / 디버깅용 훅 — 브라우저 대화상자를 띄우지 않고 상태를 확인할 수 있음 */
 window.__mzcd = {
@@ -1924,7 +2267,9 @@ window.__mzcd = {
   toast, confirmModal, issueOne, issueBulk, duplicateCheck, render,
   matchFiles, attachFolder, uploadAudio, removeAudio, togglePlay, stopPlay, toPreview,
   get playingCode(){ return playingCode; },
-  get sb(){ return sb; }
+  get sb(){ return sb; },
+  loadTriton, isValidIsrc, triParsePaste,
+  get triRows(){ return triRows; }
 };
 
 /* =========================================================
@@ -1958,6 +2303,7 @@ async function afterLogin(session){
   gate.classList.add('done');
   if (isAdmin()) await sb.rpc('mzcd_purge_trash');   // 30일 지난 휴지통 정리 (관리자만)
   await refresh();
+  loadTriton();   // 트리톤 곡 수(사이드바)만 미리 읽어 둠 — 실패해도 MZCD 화면에는 영향 없음
 }
 
 $('loginform').addEventListener('submit', async e => {
@@ -1980,15 +2326,16 @@ $('btn-logout').onclick = async () => {
   signedCache.clear();
   await sb.auth.signOut();
   records = []; trash = []; me = null;
+  triRows = []; triLoaded = false;
   role = 'member'; applyRole();
-  render();
+  render(); renderTriton();
   gate.classList.remove('done');
   gateMsg('로그아웃했습니다.');
 };
 
 // 다른 탭에 갔다 오면 팀원 변경사항 반영
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && me) refresh();
+  if (!document.hidden && me){ refresh(); if (screen === 'triton') loadTriton(); }
 });
 
 (async function boot(){
